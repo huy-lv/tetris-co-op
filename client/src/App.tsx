@@ -171,6 +171,8 @@ const App: React.FC = () => {
               lines={gameBoard.lines}
               level={gameBoard.level}
               nextPiece={gameBoard.nextPiece}
+              holdPiece={gameBoard.holdPiece}
+              canHold={gameBoard.canHold}
             />
           )}
 
@@ -253,6 +255,7 @@ const App: React.FC = () => {
                   { keys: "W A S D", action: "Move pieces" },
                   { keys: "N", action: "Rotate" },
                   { keys: "J", action: "Hard Drop" },
+                  { keys: "B", action: "Hold Piece" },
                 ].map((control, index) => (
                   <Box
                     key={index}

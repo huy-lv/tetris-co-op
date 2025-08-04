@@ -15,15 +15,19 @@ import {
   ViewStreamRounded,
   TrendingUpRounded,
   ExtensionRounded,
+  PanToolRounded,
 } from "@mui/icons-material";
 import { TetrominoType } from "../types";
 import NextPiece from "./NextPiece";
+import HoldPiece from "./HoldPiece";
 
 interface GameInfoProps {
   score: number;
   lines: number;
   level: number;
   nextPiece: TetrominoType | null;
+  holdPiece: TetrominoType | null;
+  canHold: boolean;
 }
 
 const pulseGlow = keyframes`
@@ -40,6 +44,8 @@ const GameInfo: React.FC<GameInfoProps> = ({
   lines,
   level,
   nextPiece,
+  holdPiece,
+  canHold,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -193,6 +199,64 @@ const GameInfo: React.FC<GameInfoProps> = ({
             </CardContent>
           </Card>
         )}
+
+        {/* Hold Piece Card */}
+        <Card
+          elevation={6}
+          sx={{
+            background: "rgba(26, 26, 26, 0.95)",
+            backdropFilter: "blur(10px)",
+            border: `1px solid ${
+              canHold ? "rgba(0, 170, 255, 0.2)" : "rgba(255, 50, 50, 0.2)"
+            }`,
+            opacity: canHold ? 1 : 0.7,
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            <Typography
+              variant="h6"
+              component="h4"
+              textAlign="center"
+              color={canHold ? "primary.light" : "error.light"}
+              gutterBottom
+              sx={{ mb: 2 }}
+            >
+              <PanToolRounded sx={{ mr: 1, verticalAlign: "middle" }} />
+              Hold Piece
+            </Typography>
+
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              sx={{
+                minHeight: 100,
+                background: "rgba(0, 0, 0, 0.2)",
+                borderRadius: 2,
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+              }}
+            >
+              {holdPiece ? (
+                <HoldPiece type={holdPiece} blockSize={18} />
+              ) : (
+                <Typography color="text.secondary" variant="body2">
+                  No piece held
+                </Typography>
+              )}
+            </Box>
+
+            <Typography
+              variant="body2"
+              textAlign="center"
+              color="text.secondary"
+              sx={{ mt: 1 }}
+            >
+              {holdPiece
+                ? `Type: ${holdPiece.toUpperCase()}`
+                : "Press B to hold a piece"}
+            </Typography>
+          </CardContent>
+        </Card>
       </Stack>
     </Box>
   );

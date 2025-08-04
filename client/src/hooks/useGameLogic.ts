@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { GameBoard, Tetromino, Position } from "../types";
+import { GameBoard, Tetromino, Position, TetrominoType } from "../types";
 import { GAME_CONFIG, GAME_STATES, CONTROLS } from "../constants";
 import {
   createEmptyGrid,
@@ -18,6 +18,8 @@ const createInitialGameBoard = (): GameBoard => ({
   activePiece: null,
   nextPiece: getRandomTetromino(),
   ghostPiece: null, // Add ghost piece to GameBoard
+  holdPiece: null, // Add hold piece
+  canHold: true, // Allow holding on game start
   score: 0,
   lines: 0,
   level: 0,
@@ -141,6 +143,7 @@ export const useGameLogic = () => {
             score: prev.score + scoreIncrease,
             lines: newLines,
             level: newLevel,
+            canHold: true, // Reset the ability to hold when a new piece appears
             gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
           };
         }
@@ -286,10 +289,63 @@ export const useGameLogic = () => {
         score: prev.score + scoreIncrease,
         lines: newLines,
         level: newLevel,
+        canHold: true, // Reset hold flag when a piece is placed
         gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
       };
     });
   }, [spawnNewPiece]);
+
+  const holdActivePiece = useCallback(() => {
+    setGameBoard((prev: GameBoard) => {
+      if (
+        !prev.activePiece ||
+        prev.gameState !== GAME_STATES.PLAYING ||
+        !prev.canHold
+      ) {
+        return prev;
+      }
+
+      // Get the current active piece type
+      const currentType = prev.activePiece.type;
+
+      // Determine which piece to spawn next
+      let nextActiveType: TetrominoType;
+
+      if (prev.holdPiece) {
+        // If there's already a hold piece, swap with it
+        nextActiveType = prev.holdPiece;
+      } else {
+        // If there's no hold piece yet, use the next piece and generate a new next piece
+        nextActiveType = prev.nextPiece || getRandomTetromino();
+      }
+
+      // Create the new active piece
+      const startPosition: Position = {
+        x: Math.floor(GAME_CONFIG.BOARD_WIDTH / 2) - 1,
+        y: -1,
+      };
+
+      const newActivePiece = createTetromino(nextActiveType, startPosition);
+
+      // Update ghost piece based on new active piece
+      const updatedGhostPiece = updateGhostPiece(
+        {
+          ...prev,
+          activePiece: newActivePiece,
+        },
+        newActivePiece
+      );
+
+      return {
+        ...prev,
+        activePiece: newActivePiece,
+        ghostPiece: updatedGhostPiece,
+        holdPiece: currentType,
+        nextPiece: prev.holdPiece ? prev.nextPiece : getRandomTetromino(),
+        canHold: false, // Prevent holding again until the piece is placed
+      };
+    });
+  }, [updateGhostPiece]);
 
   const startGame = useCallback(() => {
     setGameBoard((prev: GameBoard) => {
@@ -309,6 +365,8 @@ export const useGameLogic = () => {
             },
             newActivePiece
           ),
+          holdPiece: null, // Reset hold piece
+          canHold: true, // Allow holding on new game
         };
       }
 
@@ -366,6 +424,11 @@ export const useGameLogic = () => {
         return;
       }
 
+      if (lowerKey === CONTROLS.HOLD) {
+        holdActivePiece();
+        return;
+      }
+
       // Add continuous movement keys to pressed set
       if (
         lowerKey === CONTROLS.MOVE_LEFT ||
@@ -391,7 +454,7 @@ export const useGameLogic = () => {
         }
       }
     },
-    [moveActivePiece, rotateActivePiece, hardDrop]
+    [moveActivePiece, rotateActivePiece, hardDrop, holdActivePiece]
   );
 
   const handleKeyRelease = useCallback((key: string) => {
@@ -500,6 +563,7 @@ export const useGameLogic = () => {
         CONTROLS.MOVE_DOWN,
         CONTROLS.ROTATE,
         CONTROLS.HARD_DROP,
+        CONTROLS.HOLD,
       ];
 
       if (gameKeys.includes(lowerKey as any)) {
@@ -539,6 +603,7 @@ export const useGameLogic = () => {
     createRoom,
     handleKeyPress,
     handleKeyRelease,
+    holdActivePiece,
     bot,
   };
 };

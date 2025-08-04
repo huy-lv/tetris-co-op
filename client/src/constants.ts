@@ -14,6 +14,7 @@ export const CONTROLS = {
   MOVE_UP: "w",
   ROTATE: "n",
   HARD_DROP: "j",
+  HOLD: "b",
 } as const;
 
 export const TETROMINO_SHAPES = {

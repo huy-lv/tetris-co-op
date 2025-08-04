@@ -21,6 +21,8 @@ export interface GameBoard {
   activePiece: Tetromino | null;
   ghostPiece: Tetromino | null; // Ghost piece to show where the active piece will land
   nextPiece: TetrominoType | null;
+  holdPiece: TetrominoType | null; // Hold piece for the hold feature
+  canHold: boolean; // Flag to track if holding is allowed (once per piece)
   score: number;
   lines: number;
   level: number;
