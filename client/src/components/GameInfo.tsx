@@ -17,8 +17,7 @@ import {
   ExtensionRounded,
 } from "@mui/icons-material";
 import { TetrominoType } from "../types";
-import { GAME_CONFIG } from "../constants";
-import { getTetrominoColor } from "../utils/gameUtils";
+import NextPiece from "./NextPiece";
 
 interface GameInfoProps {
   score: number;
@@ -173,36 +172,14 @@ const GameInfo: React.FC<GameInfoProps> = ({
                 display="flex"
                 justifyContent="center"
                 alignItems="center"
-                sx={{ minHeight: 80 }}
+                sx={{ 
+                  minHeight: 100,
+                  background: "rgba(0, 0, 0, 0.2)",
+                  borderRadius: 2,
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                }}
               >
-                <Box
-                  sx={{
-                    width: GAME_CONFIG.BLOCK_SIZE * 2,
-                    height: GAME_CONFIG.BLOCK_SIZE * 2,
-                    backgroundColor: getTetrominoColor(nextPiece),
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    borderRadius: 2,
-                    boxShadow: `0 4px 20px ${getTetrominoColor(nextPiece)}40`,
-                    position: "relative",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      transform: "scale(1.1)",
-                      boxShadow: `0 6px 25px ${getTetrominoColor(nextPiece)}60`,
-                    },
-                    "&::after": {
-                      content: '""',
-                      position: "absolute",
-                      top: 2,
-                      left: 2,
-                      right: 2,
-                      bottom: 2,
-                      background:
-                        "linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent)",
-                      borderRadius: 1,
-                      pointerEvents: "none",
-                    },
-                  }}
-                />
+                <NextPiece type={nextPiece} blockSize={18} />
               </Box>
 
               <Typography
