@@ -1,0 +1,337 @@
+import { useState, useCallback, useEffect, useRef } from "react";
+import { GameBoard, Tetromino, Position } from "../types";
+import { GAME_CONFIG, GAME_STATES, CONTROLS } from "../constants";
+import {
+  createEmptyGrid,
+  getRandomTetromino,
+  createTetromino,
+  rotateTetromino,
+  isValidPosition,
+  placeTetromino,
+  clearLines,
+  calculateScore,
+} from "../utils/gameUtils";
+
+const createInitialGameBoard = (): GameBoard => ({
+  grid: createEmptyGrid(),
+  activePiece: null,
+  nextPiece: getRandomTetromino(),
+  score: 0,
+  lines: 0,
+  level: 0,
+  gameState: GAME_STATES.WELCOME,
+});
+
+export const useGameLogic = () => {
+  const [gameBoard, setGameBoard] = useState<GameBoard>(createInitialGameBoard);
+  const [playerName, setPlayerName] = useState<string>("");
+  const gameLoopRef = useRef<number | null>(null);
+  const lastDropTimeRef = useRef<number>(0);
+
+  const spawnNewPiece = useCallback((): Tetromino => {
+    const type = gameBoard.nextPiece || getRandomTetromino();
+    const startPosition: Position = {
+      x: Math.floor(GAME_CONFIG.BOARD_WIDTH / 2) - 1,
+      y: -1,
+    };
+
+    return createTetromino(type, startPosition);
+  }, [gameBoard.nextPiece]);
+
+  const moveActivePiece = useCallback(
+    (direction: "left" | "right" | "down") => {
+      setGameBoard((prev: GameBoard) => {
+        if (!prev.activePiece || prev.gameState !== GAME_STATES.PLAYING)
+          return prev;
+
+        const offsets = {
+          left: { x: -1, y: 0 },
+          right: { x: 1, y: 0 },
+          down: { x: 0, y: 1 },
+        };
+
+        const newPosition: Position = {
+          x: prev.activePiece.position.x + offsets[direction].x,
+          y: prev.activePiece.position.y + offsets[direction].y,
+        };
+
+        const canMove = isValidPosition(
+          prev.grid,
+          prev.activePiece,
+          newPosition
+        );
+
+        if (canMove) {
+          return {
+            ...prev,
+            activePiece: {
+              ...prev.activePiece,
+              position: newPosition,
+            },
+          };
+        }
+
+        // If moving down failed, place the piece
+        if (direction === "down") {
+          const newGrid = placeTetromino(prev.grid, prev.activePiece);
+          const { newGrid: clearedGrid, linesCleared } = clearLines(newGrid);
+          const scoreIncrease = calculateScore(linesCleared, prev.level);
+          const newLines = prev.lines + linesCleared;
+          const newLevel = Math.floor(newLines / GAME_CONFIG.LINES_PER_LEVEL);
+
+          // Check for game over
+          const newActivePiece = spawnNewPiece();
+          const gameOver = !isValidPosition(
+            clearedGrid,
+            newActivePiece,
+            newActivePiece.position
+          );
+
+          return {
+            ...prev,
+            grid: clearedGrid,
+            activePiece: gameOver ? null : newActivePiece,
+            nextPiece: getRandomTetromino(),
+            score: prev.score + scoreIncrease,
+            lines: newLines,
+            level: newLevel,
+            gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
+          };
+        }
+
+        return prev;
+      });
+    },
+    [spawnNewPiece]
+  );
+
+  const rotateActivePiece = useCallback(() => {
+    setGameBoard((prev: GameBoard) => {
+      if (!prev.activePiece || prev.gameState !== GAME_STATES.PLAYING)
+        return prev;
+
+      const rotatedPiece = rotateTetromino(prev.activePiece);
+      const currentPos = prev.activePiece.position;
+      const boardWidth = GAME_CONFIG.BOARD_WIDTH;
+
+      // Smart wall kick: determine direction based on piece position
+      const isNearLeftWall = currentPos.x <= 2;
+      const isNearRightWall = currentPos.x >= boardWidth - 3;
+
+      let wallKickOffsets: Array<{ x: number; y: number }>;
+
+      if (isNearLeftWall) {
+        // Near left wall - prioritize moving right
+        wallKickOffsets = [
+          { x: 0, y: 0 }, // Original position
+          { x: 1, y: 0 }, // Move right
+          { x: 2, y: 0 }, // Move further right
+          { x: 3, y: 0 }, // Move even further right (for I piece)
+          { x: 0, y: -1 }, // Move up
+          { x: 1, y: -1 }, // Move right and up
+        ];
+      } else if (isNearRightWall) {
+        // Near right wall - prioritize moving left
+        wallKickOffsets = [
+          { x: 0, y: 0 }, // Original position
+          { x: -1, y: 0 }, // Move left
+          { x: -2, y: 0 }, // Move further left
+          { x: -3, y: 0 }, // Move even further left (for I piece)
+          { x: 0, y: -1 }, // Move up
+          { x: -1, y: -1 }, // Move left and up
+        ];
+      } else {
+        // Middle of board - try both directions
+        wallKickOffsets = [
+          { x: 0, y: 0 }, // Original position
+          { x: -1, y: 0 }, // Try moving left first
+          { x: 1, y: 0 }, // Try moving right
+          { x: -2, y: 0 }, // Try moving further left
+          { x: 2, y: 0 }, // Try moving further right
+          { x: 0, y: -1 }, // Try moving up
+          { x: -1, y: -1 }, // Try left and up
+          { x: 1, y: -1 }, // Try right and up
+        ];
+      }
+
+      // Try each wall kick offset
+      for (const offset of wallKickOffsets) {
+        const testPosition: Position = {
+          x: rotatedPiece.position.x + offset.x,
+          y: rotatedPiece.position.y + offset.y,
+        };
+
+        if (isValidPosition(prev.grid, rotatedPiece, testPosition)) {
+          return {
+            ...prev,
+            activePiece: {
+              ...rotatedPiece,
+              position: testPosition,
+            },
+          };
+        }
+      }
+
+      // If no wall kick worked, don't rotate
+      return prev;
+    });
+  }, []);
+
+  const hardDrop = useCallback(() => {
+    setGameBoard((prev: GameBoard) => {
+      if (!prev.activePiece || prev.gameState !== GAME_STATES.PLAYING)
+        return prev;
+
+      let dropDistance = 0;
+      let testPosition = { ...prev.activePiece.position };
+
+      // Find how far we can drop
+      while (
+        isValidPosition(prev.grid, prev.activePiece, {
+          x: testPosition.x,
+          y: testPosition.y + 1,
+        })
+      ) {
+        testPosition.y += 1;
+        dropDistance += 1;
+      }
+
+      const droppedPiece = {
+        ...prev.activePiece,
+        position: testPosition,
+      };
+
+      const newGrid = placeTetromino(prev.grid, droppedPiece);
+      const { newGrid: clearedGrid, linesCleared } = clearLines(newGrid);
+      const scoreIncrease =
+        calculateScore(linesCleared, prev.level) + dropDistance * 2;
+      const newLines = prev.lines + linesCleared;
+      const newLevel = Math.floor(newLines / GAME_CONFIG.LINES_PER_LEVEL);
+
+      // Check for game over
+      const newActivePiece = spawnNewPiece();
+      const gameOver = !isValidPosition(
+        clearedGrid,
+        newActivePiece,
+        newActivePiece.position
+      );
+
+      return {
+        ...prev,
+        grid: clearedGrid,
+        activePiece: gameOver ? null : newActivePiece,
+        nextPiece: getRandomTetromino(),
+        score: prev.score + scoreIncrease,
+        lines: newLines,
+        level: newLevel,
+        gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
+      };
+    });
+  }, [spawnNewPiece]);
+
+  const startGame = useCallback(() => {
+    setGameBoard((prev: GameBoard) => ({
+      ...prev,
+      activePiece: spawnNewPiece(),
+      gameState: GAME_STATES.PLAYING,
+    }));
+    lastDropTimeRef.current = Date.now();
+  }, [spawnNewPiece]);
+
+  const pauseGame = useCallback(() => {
+    setGameBoard((prev: GameBoard) => ({
+      ...prev,
+      gameState:
+        prev.gameState === GAME_STATES.PLAYING
+          ? GAME_STATES.PAUSED
+          : GAME_STATES.PLAYING,
+    }));
+  }, []);
+
+  const resetGame = useCallback(() => {
+    setGameBoard(createInitialGameBoard());
+  }, []);
+
+  const createRoom = useCallback((name: string) => {
+    setPlayerName(name);
+    setGameBoard((prev: GameBoard) => ({
+      ...prev,
+      gameState: GAME_STATES.WAITING,
+    }));
+  }, []);
+
+  const handleKeyPress = useCallback(
+    (key: string) => {
+      const lowerKey = key.toLowerCase();
+
+      if (lowerKey === CONTROLS.MOVE_LEFT) {
+        moveActivePiece("left");
+      } else if (lowerKey === CONTROLS.MOVE_RIGHT) {
+        moveActivePiece("right");
+      } else if (lowerKey === CONTROLS.MOVE_DOWN) {
+        moveActivePiece("down");
+      } else if (lowerKey === CONTROLS.ROTATE) {
+        rotateActivePiece();
+      } else if (lowerKey === CONTROLS.HARD_DROP) {
+        hardDrop();
+      }
+    },
+    [moveActivePiece, rotateActivePiece, hardDrop]
+  );
+
+  // Game loop
+  useEffect(() => {
+    const gameLoop = () => {
+      const now = Date.now();
+      const dropSpeed =
+        GAME_CONFIG.INITIAL_SPEED -
+        gameBoard.level * GAME_CONFIG.SPEED_INCREASE;
+      const minSpeed = 50;
+      const actualDropSpeed = Math.max(dropSpeed, minSpeed);
+
+      if (
+        gameBoard.gameState === GAME_STATES.PLAYING &&
+        gameBoard.activePiece &&
+        now - lastDropTimeRef.current > actualDropSpeed
+      ) {
+        moveActivePiece("down");
+        lastDropTimeRef.current = now;
+      }
+
+      gameLoopRef.current = requestAnimationFrame(gameLoop);
+    };
+
+    gameLoopRef.current = requestAnimationFrame(gameLoop);
+
+    return () => {
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+      }
+    };
+  }, [
+    gameBoard.gameState,
+    gameBoard.level,
+    gameBoard.activePiece,
+    moveActivePiece,
+  ]);
+
+  // Keyboard event listeners
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      handleKeyPress(event.key);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyPress]);
+
+  return {
+    gameBoard,
+    playerName,
+    startGame,
+    pauseGame,
+    resetGame,
+    createRoom,
+    handleKeyPress,
+  };
+};

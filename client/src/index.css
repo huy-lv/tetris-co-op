@@ -1,0 +1,35 @@
+:root {
+  --primary-color: #0066cc;
+  --secondary-color: #004499;
+  --accent-color: #00aaff;
+  --background-color: #0a0a0a;
+  --surface-color: #1a1a1a;
+  --text-color: #ffffff;
+  --text-secondary: #cccccc;
+  --border-color: #333333;
+  --success-color: #00cc66;
+  --danger-color: #cc0066;
+  --warning-color: #ffaa00;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
