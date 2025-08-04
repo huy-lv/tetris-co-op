@@ -312,6 +312,9 @@ export const useGameLogic = () => {
 
         // Execute immediate movement on first press
         const now = Date.now();
+        // Record when key was first pressed (for acceleration)
+        lastMoveTimeRef.current[lowerKey + "_start"] = now;
+        
         if (!lastMoveTimeRef.current[lowerKey]) {
           if (lowerKey === CONTROLS.MOVE_LEFT) {
             moveActivePiece("left");
@@ -331,6 +334,7 @@ export const useGameLogic = () => {
     const lowerKey = key.toLowerCase();
     keysPressed.current.delete(lowerKey);
     delete lastMoveTimeRef.current[lowerKey];
+    delete lastMoveTimeRef.current[lowerKey + "_start"]; // Remove the start time as well
   }, []);
 
   // Game loop
@@ -353,12 +357,24 @@ export const useGameLogic = () => {
         lastDropTimeRef.current = now;
       }
 
-      // Handle continuous movement for held keys
-      const moveSpeed = 150; // milliseconds between moves when holding key
+      // Handle continuous movement for held keys with acceleration
       keysPressed.current.forEach((key) => {
         if (gameBoard.gameState === GAME_STATES.PLAYING) {
           const lastMoveTime = lastMoveTimeRef.current[key] || 0;
-          if (now - lastMoveTime > moveSpeed) {
+          const holdDuration = now - lastMoveTime;
+          
+          // Calculate adaptive move speed: faster the longer the key is held
+          // Initial speed: 150ms, reduces to 50ms after holding for 1 second
+          const baseMoveSpeed = 150; // Initial delay in milliseconds
+          const minMoveSpeed = 50;   // Minimum delay in milliseconds (maximum speed)
+          const accelerationTime = 1000; // Time to reach maximum speed in milliseconds
+          
+          // Calculate current move speed based on how long the key has been held
+          const holdingTime = now - (lastMoveTimeRef.current[key + "_start"] || now);
+          const speedReduction = Math.min(holdingTime / accelerationTime, 1) * (baseMoveSpeed - minMoveSpeed);
+          const currentMoveSpeed = baseMoveSpeed - speedReduction;
+          
+          if (holdDuration > currentMoveSpeed) {
             if (key === CONTROLS.MOVE_LEFT) {
               moveActivePiece("left");
             } else if (key === CONTROLS.MOVE_RIGHT) {
