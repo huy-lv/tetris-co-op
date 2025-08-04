@@ -6,7 +6,7 @@ import {
   Typography,
   TextField,
   Button,
-  Grid,
+  Stack,
   Chip,
   Container,
   Fade,
@@ -18,6 +18,7 @@ import { GamepadRounded, SportsEsportsRounded } from "@mui/icons-material";
 
 interface WelcomeScreenProps {
   onCreateRoom: (playerName: string) => void;
+  savedPlayerName?: string;
 }
 
 const pulseAnimation = keyframes`
@@ -26,8 +27,11 @@ const pulseAnimation = keyframes`
   100% { transform: scale(1); }
 `;
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateRoom }) => {
-  const [playerName, setPlayerName] = useState<string>("");
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
+  onCreateRoom,
+  savedPlayerName = "",
+}) => {
+  const [playerName, setPlayerName] = useState<string>(savedPlayerName);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -134,55 +138,54 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onCreateRoom }) => {
                     Game Controls
                   </Typography>
 
-                  <Grid container spacing={2}>
+                  <Stack spacing={2}>
                     {controls.map((control, index) => (
-                      <Grid item xs={12} key={index}>
-                        <Card
-                          variant="outlined"
-                          sx={{
-                            background: "rgba(0, 0, 0, 0.3)",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                            transition: "all 0.3s ease",
-                            "&:hover": {
-                              background: "rgba(0, 170, 255, 0.1)",
-                              border: "1px solid rgba(0, 170, 255, 0.3)",
-                              transform: "translateY(-2px)",
-                            },
-                          }}
-                        >
-                          <CardContent sx={{ p: 2 }}>
-                            <Box
-                              display="flex"
-                              justifyContent="space-between"
-                              alignItems="center"
-                            >
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <Typography variant="h6" component="span">
-                                  {control.icon}
-                                </Typography>
-                                <Chip
-                                  label={control.keys}
-                                  color="primary"
-                                  variant="outlined"
-                                  sx={{
-                                    fontFamily: "monospace",
-                                    fontWeight: "bold",
-                                  }}
-                                />
-                              </Box>
-                              <Typography
-                                variant="body1"
-                                color="text.secondary"
-                                fontWeight={500}
-                              >
-                                {control.action}
+                      <Card
+                        key={index}
+                        variant="outlined"
+                        sx={{
+                          background: "rgba(0, 0, 0, 0.3)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          transition: "all 0.3s ease",
+                          "&:hover": {
+                            background: "rgba(0, 170, 255, 0.1)",
+                            border: "1px solid rgba(0, 170, 255, 0.3)",
+                            transform: "translateY(-2px)",
+                          },
+                        }}
+                      >
+                        <CardContent sx={{ p: 2 }}>
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Typography variant="h6" component="span">
+                                {control.icon}
                               </Typography>
+                              <Chip
+                                label={control.keys}
+                                color="primary"
+                                variant="outlined"
+                                sx={{
+                                  fontFamily: "monospace",
+                                  fontWeight: "bold",
+                                }}
+                              />
                             </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
+                            <Typography
+                              variant="body1"
+                              color="text.secondary"
+                              fontWeight={500}
+                            >
+                              {control.action}
+                            </Typography>
+                          </Box>
+                        </CardContent>
+                      </Card>
                     ))}
-                  </Grid>
+                  </Stack>
                 </Box>
               </Box>
             </CardContent>

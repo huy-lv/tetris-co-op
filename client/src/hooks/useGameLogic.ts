@@ -24,7 +24,10 @@ const createInitialGameBoard = (): GameBoard => ({
 
 export const useGameLogic = () => {
   const [gameBoard, setGameBoard] = useState<GameBoard>(createInitialGameBoard);
-  const [playerName, setPlayerName] = useState<string>("");
+  const [playerName, setPlayerName] = useState<string>(() => {
+    // Load player name from localStorage on initialization
+    return localStorage.getItem("tetris-player-name") || "";
+  });
   const gameLoopRef = useRef<number | null>(null);
   const lastDropTimeRef = useRef<number>(0);
   const keysPressed = useRef<Set<string>>(new Set());
@@ -232,11 +235,23 @@ export const useGameLogic = () => {
   }, [spawnNewPiece]);
 
   const startGame = useCallback(() => {
-    setGameBoard((prev: GameBoard) => ({
-      ...prev,
-      activePiece: spawnNewPiece(),
-      gameState: GAME_STATES.PLAYING,
-    }));
+    setGameBoard((prev: GameBoard) => {
+      // If game over, reset the board completely
+      if (prev.gameState === GAME_STATES.GAME_OVER) {
+        return {
+          ...createInitialGameBoard(),
+          gameState: GAME_STATES.PLAYING,
+          activePiece: spawnNewPiece(),
+        };
+      }
+
+      // Regular start from waiting state
+      return {
+        ...prev,
+        activePiece: spawnNewPiece(),
+        gameState: GAME_STATES.PLAYING,
+      };
+    });
     lastDropTimeRef.current = Date.now();
   }, [spawnNewPiece]);
 
@@ -255,6 +270,8 @@ export const useGameLogic = () => {
   }, []);
 
   const createRoom = useCallback((name: string) => {
+    // Save player name to localStorage
+    localStorage.setItem("tetris-player-name", name);
     setPlayerName(name);
     setGameBoard((prev: GameBoard) => ({
       ...prev,
@@ -271,7 +288,7 @@ export const useGameLogic = () => {
         rotateActivePiece();
         return;
       }
-      
+
       if (lowerKey === CONTROLS.HARD_DROP) {
         hardDrop();
         return;
@@ -284,7 +301,7 @@ export const useGameLogic = () => {
         lowerKey === CONTROLS.MOVE_DOWN
       ) {
         keysPressed.current.add(lowerKey);
-        
+
         // Execute immediate movement on first press
         const now = Date.now();
         if (!lastMoveTimeRef.current[lowerKey]) {
@@ -366,6 +383,14 @@ export const useGameLogic = () => {
   // Keyboard event listeners
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle game keys when in game states (not welcome screen)
+      if (
+        gameBoard.gameState === GAME_STATES.WELCOME ||
+        gameBoard.gameState === GAME_STATES.GAME_OVER
+      ) {
+        return;
+      }
+
       // Prevent default for game keys to avoid browser shortcuts
       const lowerKey = event.key.toLowerCase();
       const gameKeys = [
@@ -375,26 +400,34 @@ export const useGameLogic = () => {
         CONTROLS.ROTATE,
         CONTROLS.HARD_DROP,
       ];
-      
+
       if (gameKeys.includes(lowerKey as any)) {
         event.preventDefault();
       }
-      
+
       handleKeyPress(event.key);
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      // Only handle game keys when in game states (not welcome screen)
+      if (
+        gameBoard.gameState === GAME_STATES.WELCOME ||
+        gameBoard.gameState === GAME_STATES.GAME_OVER
+      ) {
+        return;
+      }
+
       handleKeyRelease(event.key);
     };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-    
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [handleKeyPress, handleKeyRelease]);
+  }, [handleKeyPress, handleKeyRelease, gameBoard.gameState]);
 
   return {
     gameBoard,

@@ -172,7 +172,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
                 display="flex"
                 justifyContent="center"
                 alignItems="center"
-                sx={{ 
+                sx={{
                   minHeight: 100,
                   background: "rgba(0, 0, 0, 0.2)",
                   borderRadius: 2,

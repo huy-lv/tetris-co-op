@@ -19,18 +19,14 @@ const NextPiece: React.FC<NextPieceProps> = ({ type, blockSize = 20 }) => {
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
-      sx={{ 
+      sx={{
         padding: 1,
         minHeight: blockSize * 4,
         minWidth: blockSize * 4,
       }}
     >
       {shape.map((row, rowIndex) => (
-        <Box
-          key={rowIndex}
-          display="flex"
-          sx={{ height: blockSize }}
-        >
+        <Box key={rowIndex} display="flex" sx={{ height: blockSize }}>
           {row.map((cell, colIndex) => (
             <Box
               key={`${rowIndex}-${colIndex}`}

@@ -16,7 +16,6 @@ import { useGameLogic } from "./hooks/useGameLogic";
 import WelcomeScreen from "./components/WelcomeScreen";
 import GameBoard from "./components/GameBoard";
 import GameInfo from "./components/GameInfo";
-import GameOverScreen from "./components/GameOverScreen";
 
 const pulseAnimation = keyframes`
   0%, 100% { opacity: 0.8; transform: scale(1); }
@@ -24,35 +23,20 @@ const pulseAnimation = keyframes`
 `;
 
 const App: React.FC = () => {
-  const { gameBoard, playerName, startGame, resetGame, createRoom } =
-    useGameLogic();
+  const { gameBoard, playerName, startGame, createRoom } = useGameLogic();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-
-  const handleBackToWelcome = () => {
-    resetGame();
-  };
 
   const renderGameContent = () => {
     const { gameState } = gameBoard;
 
     if (gameState === GAME_STATES.WELCOME) {
-      return <WelcomeScreen onCreateRoom={createRoom} />;
-    }
-
-    if (gameState === GAME_STATES.GAME_OVER) {
       return (
-        <GameOverScreen
-          score={gameBoard.score}
-          lines={gameBoard.lines}
-          level={gameBoard.level}
-          onRestart={startGame}
-          onBackToWelcome={handleBackToWelcome}
-        />
+        <WelcomeScreen onCreateRoom={createRoom} savedPlayerName={playerName} />
       );
     }
 
-    // WAITING, Playing or Paused state - show game layout
+    // WAITING, Playing, Paused, or Game Over state - show game layout
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Stack
@@ -108,6 +92,71 @@ const App: React.FC = () => {
                   <Typography variant="body1" color="text.secondary">
                     Press any movement key to resume
                   </Typography>
+                </Paper>
+              </Box>
+            )}
+
+            {gameState === GAME_STATES.GAME_OVER && (
+              <Box
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                sx={{
+                  background: "rgba(0, 0, 0, 0.9)",
+                  backdropFilter: "blur(10px)",
+                  borderRadius: 3,
+                  zIndex: 1000,
+                }}
+              >
+                <Paper
+                  elevation={8}
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                    background: "rgba(26, 26, 26, 0.95)",
+                    border: "2px solid rgba(255, 69, 58, 0.6)",
+                    animation: `${pulseAnimation} 2s ease-in-out infinite`,
+                  }}
+                >
+                  <Typography variant="h3" color="error.main" gutterBottom>
+                    💀 GAME OVER
+                  </Typography>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Final Score: {gameBoard.score.toLocaleString()}
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ mb: 3 }}
+                  >
+                    Lines: {gameBoard.lines} • Level: {gameBoard.level}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    size="large"
+                    onClick={startGame}
+                    sx={{
+                      py: 1.5,
+                      px: 4,
+                      fontSize: "1.1rem",
+                      fontWeight: 600,
+                      background: "linear-gradient(45deg, #00aa55, #00cc66)",
+                      "&:hover": {
+                        background: "linear-gradient(45deg, #009944, #00bb55)",
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 8px 25px rgba(0, 204, 102, 0.4)",
+                      },
+                      transition: "all 0.3s ease-in-out",
+                    }}
+                  >
+                    🎮 Start Again
+                  </Button>
                 </Paper>
               </Box>
             )}
