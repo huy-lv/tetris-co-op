@@ -123,6 +123,12 @@ export const calculateScore = (linesCleared: number, level: number): number => {
   return baseScores[linesCleared] * (level + 1);
 };
 
-export const getTetrominoColor = (type: TetrominoType): string => {
+export const getTetrominoColor = (
+  type: TetrominoType,
+  isGhost: boolean = false
+): string => {
+  if (isGhost) {
+    return "rgba(220, 220, 220, 0.3)"; // Light gray semi-transparent for ghost pieces
+  }
   return TETROMINO_COLORS[type];
 };

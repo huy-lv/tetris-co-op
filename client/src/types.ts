@@ -19,6 +19,7 @@ export interface Tetromino {
 export interface GameBoard {
   grid: (TetrominoType | null)[][];
   activePiece: Tetromino | null;
+  ghostPiece: Tetromino | null; // Ghost piece to show where the active piece will land
   nextPiece: TetrominoType | null;
   score: number;
   lines: number;

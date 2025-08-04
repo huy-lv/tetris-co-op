@@ -8,30 +8,54 @@ import { getTetrominoColor } from "../utils/gameUtils";
 interface GameBoardProps {
   grid: (TetrominoType | null)[][];
   activePiece: Tetromino | null;
+  ghostPiece: Tetromino | null;
 }
 
 const blockGlow = keyframes`
-  0%, 100% { 
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  0%, 100% {
+     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   }
-  50% { 
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  50% {
+     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
   }
 `;
 
 const GameBoardComponent: React.FC<GameBoardProps> = ({
   grid,
   activePiece,
+  ghostPiece,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
   const blockSize = isMobile
     ? GAME_CONFIG.BLOCK_SIZE * 0.8
     : GAME_CONFIG.BLOCK_SIZE;
 
   const renderGrid = () => {
     const displayGrid = grid.map((row) => [...row]);
+
+    // Build a set of ghost piece coordinates for easy lookup
+    const ghostCoords = new Set<string>();
+
+    if (ghostPiece) {
+      ghostPiece.shape.forEach((row, y) => {
+        row.forEach((cell, x) => {
+          if (cell === 1) {
+            const boardY = ghostPiece.position.y + y;
+            const boardX = ghostPiece.position.x + x;
+
+            if (
+              boardY >= 0 &&
+              boardY < GAME_CONFIG.BOARD_HEIGHT &&
+              boardX >= 0 &&
+              boardX < GAME_CONFIG.BOARD_WIDTH
+            ) {
+              ghostCoords.add(`${boardY}-${boardX}`);
+            }
+          }
+        });
+      });
+    }
 
     // Add active piece to display grid
     if (activePiece) {
@@ -56,47 +80,64 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
 
     return displayGrid.map((row, y) => (
       <Box key={y} display="flex">
-        {row.map((cell, x) => (
-          <Box
-            key={`${y}-${x}`}
-            sx={{
-              width: blockSize,
-              height: blockSize,
-              backgroundColor: cell ? getTetrominoColor(cell) : "transparent",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              position: "relative",
-              animation: cell ? `${blockGlow} 2s ease-in-out infinite` : "none",
-              "&::before": cell
-                ? {
-                    content: '""',
-                    position: "absolute",
-                    top: 1,
-                    left: 1,
-                    right: 1,
-                    bottom: 1,
-                    background:
-                      "linear-gradient(135deg, rgba(255, 255, 255, 0.3), transparent)",
-                    borderRadius: "2px",
-                    pointerEvents: "none",
-                  }
-                : {},
-              "&::after": cell
-                ? {
-                    content: '""',
-                    position: "absolute",
-                    bottom: 1,
-                    right: 1,
-                    width: "60%",
-                    height: "60%",
-                    background:
-                      "linear-gradient(135deg, transparent, rgba(0, 0, 0, 0.2))",
-                    borderRadius: "2px",
-                    pointerEvents: "none",
-                  }
-                : {},
-            }}
-          />
-        ))}
+        {row.map((cell, x) => {
+          // Check if this position is a ghost piece
+          const isGhostPiece = ghostCoords.has(`${y}-${x}`);
+
+          // Only render ghost piece if there's no real piece at this location
+          const finalCell =
+            cell || (isGhostPiece && !cell) ? cell || ghostPiece?.type : null;
+          const isGhost = !cell && isGhostPiece;
+
+          return (
+            <Box
+              key={`${y}-${x}`}
+              sx={{
+                width: blockSize,
+                height: blockSize,
+                backgroundColor: finalCell
+                  ? getTetrominoColor(finalCell, isGhost)
+                  : "transparent",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                position: "relative",
+                animation:
+                  finalCell && !isGhost
+                    ? `${blockGlow} 2s ease-in-out infinite`
+                    : "none",
+                "&::before":
+                  finalCell && !isGhost
+                    ? {
+                        content: '""',
+                        position: "absolute",
+                        top: 1,
+                        left: 1,
+                        right: 1,
+                        bottom: 1,
+                        background:
+                          "linear-gradient(135deg, rgba(255, 255, 255, 0.3), transparent)",
+                        borderRadius: "2px",
+                        pointerEvents: "none",
+                      }
+                    : {},
+                "&::after":
+                  finalCell && !isGhost
+                    ? {
+                        content: '""',
+                        position: "absolute",
+                        bottom: 1,
+                        right: 1,
+                        width: "60%",
+                        height: "60%",
+                        background:
+                          "linear-gradient(135deg, transparent, rgba(0, 0, 0, 0.2))",
+                        borderRadius: "2px",
+                        pointerEvents: "none",
+                      }
+                    : {},
+              }}
+            />
+          );
+        })}
       </Box>
     ));
   };
@@ -135,10 +176,9 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
         sx={{
           display: "flex",
           flexDirection: "column",
-          border: "2px solid rgba(255, 255, 255, 0.2)",
-          borderRadius: 2,
-          overflow: "hidden",
-          background: "rgba(0, 0, 0, 0.8)",
+          background: "rgba(0, 0, 0, 0.5)",
+          padding: "2px",
+          borderRadius: 1,
         }}
       >
         {renderGrid()}

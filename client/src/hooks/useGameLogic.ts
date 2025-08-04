@@ -17,6 +17,7 @@ const createInitialGameBoard = (): GameBoard => ({
   grid: createEmptyGrid(),
   activePiece: null,
   nextPiece: getRandomTetromino(),
+  ghostPiece: null, // Add ghost piece to GameBoard
   score: 0,
   lines: 0,
   level: 0,
@@ -51,6 +52,32 @@ export const useGameLogic = () => {
     return createTetromino(type, startPosition);
   }, [gameBoard.nextPiece]);
 
+  // Calculate and update ghost piece position
+  const updateGhostPiece = useCallback(
+    (board: GameBoard, activePiece: Tetromino): Tetromino | null => {
+      if (!activePiece) return null;
+
+      // Create a copy of the active piece for the ghost
+      const ghostPiece: Tetromino = {
+        ...activePiece,
+        position: { ...activePiece.position },
+      };
+
+      // Drop the ghost piece as far as it can go
+      while (
+        isValidPosition(board.grid, ghostPiece, {
+          x: ghostPiece.position.x,
+          y: ghostPiece.position.y + 1,
+        })
+      ) {
+        ghostPiece.position.y += 1;
+      }
+
+      return ghostPiece;
+    },
+    []
+  );
+
   const moveActivePiece = useCallback(
     (direction: "left" | "right" | "down") => {
       setGameBoard((prev: GameBoard) => {
@@ -75,12 +102,18 @@ export const useGameLogic = () => {
         );
 
         if (canMove) {
+          const updatedPiece = {
+            ...prev.activePiece,
+            position: newPosition,
+          };
+
+          // Update ghost piece based on new active piece position
+          const updatedGhostPiece = updateGhostPiece(prev, updatedPiece);
+
           return {
             ...prev,
-            activePiece: {
-              ...prev.activePiece,
-              position: newPosition,
-            },
+            activePiece: updatedPiece,
+            ghostPiece: updatedGhostPiece,
           };
         }
 
@@ -175,12 +208,18 @@ export const useGameLogic = () => {
         };
 
         if (isValidPosition(prev.grid, rotatedPiece, testPosition)) {
+          const updatedPiece = {
+            ...rotatedPiece,
+            position: testPosition,
+          };
+
+          // Update ghost piece after rotation
+          const updatedGhostPiece = updateGhostPiece(prev, updatedPiece);
+
           return {
             ...prev,
-            activePiece: {
-              ...rotatedPiece,
-              position: testPosition,
-            },
+            activePiece: updatedPiece,
+            ghostPiece: updatedGhostPiece,
           };
         }
       }
@@ -233,6 +272,16 @@ export const useGameLogic = () => {
         ...prev,
         grid: clearedGrid,
         activePiece: gameOver ? null : newActivePiece,
+        ghostPiece: gameOver
+          ? null
+          : updateGhostPiece(
+              {
+                ...prev,
+                grid: clearedGrid,
+                activePiece: newActivePiece,
+              },
+              newActivePiece
+            ),
         nextPiece: getRandomTetromino(),
         score: prev.score + scoreIncrease,
         lines: newLines,
@@ -246,17 +295,32 @@ export const useGameLogic = () => {
     setGameBoard((prev: GameBoard) => {
       // If game over, reset the board completely
       if (prev.gameState === GAME_STATES.GAME_OVER) {
+        const newActivePiece = spawnNewPiece();
+        const initialBoard = createInitialGameBoard();
+
         return {
-          ...createInitialGameBoard(),
+          ...initialBoard,
           gameState: GAME_STATES.PLAYING,
-          activePiece: spawnNewPiece(),
+          activePiece: newActivePiece,
+          ghostPiece: updateGhostPiece(
+            {
+              ...initialBoard,
+              activePiece: newActivePiece,
+            },
+            newActivePiece
+          ),
         };
       }
 
       // Regular start from waiting state
+      const newActivePiece = spawnNewPiece();
       return {
         ...prev,
-        activePiece: spawnNewPiece(),
+        activePiece: newActivePiece,
+        ghostPiece: updateGhostPiece(
+          { ...prev, activePiece: newActivePiece },
+          newActivePiece
+        ),
         gameState: GAME_STATES.PLAYING,
       };
     });
@@ -314,7 +378,7 @@ export const useGameLogic = () => {
         const now = Date.now();
         // Record when key was first pressed (for acceleration)
         lastMoveTimeRef.current[lowerKey + "_start"] = now;
-        
+
         if (!lastMoveTimeRef.current[lowerKey]) {
           if (lowerKey === CONTROLS.MOVE_LEFT) {
             moveActivePiece("left");
@@ -362,18 +426,21 @@ export const useGameLogic = () => {
         if (gameBoard.gameState === GAME_STATES.PLAYING) {
           const lastMoveTime = lastMoveTimeRef.current[key] || 0;
           const holdDuration = now - lastMoveTime;
-          
+
           // Calculate adaptive move speed: faster the longer the key is held
           // Initial speed: 150ms, reduces to 50ms after holding for 1 second
           const baseMoveSpeed = 150; // Initial delay in milliseconds
-          const minMoveSpeed = 50;   // Minimum delay in milliseconds (maximum speed)
+          const minMoveSpeed = 50; // Minimum delay in milliseconds (maximum speed)
           const accelerationTime = 1000; // Time to reach maximum speed in milliseconds
-          
+
           // Calculate current move speed based on how long the key has been held
-          const holdingTime = now - (lastMoveTimeRef.current[key + "_start"] || now);
-          const speedReduction = Math.min(holdingTime / accelerationTime, 1) * (baseMoveSpeed - minMoveSpeed);
+          const holdingTime =
+            now - (lastMoveTimeRef.current[key + "_start"] || now);
+          const speedReduction =
+            Math.min(holdingTime / accelerationTime, 1) *
+            (baseMoveSpeed - minMoveSpeed);
           const currentMoveSpeed = baseMoveSpeed - speedReduction;
-          
+
           if (holdDuration > currentMoveSpeed) {
             if (key === CONTROLS.MOVE_LEFT) {
               moveActivePiece("left");

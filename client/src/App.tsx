@@ -51,6 +51,7 @@ const App: React.FC = () => {
             <GameBoard
               grid={gameBoard.grid}
               activePiece={gameBoard.activePiece}
+              ghostPiece={gameBoard.ghostPiece}
             />
 
             {gameState === GAME_STATES.PAUSED && (
