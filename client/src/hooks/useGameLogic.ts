@@ -27,6 +27,8 @@ export const useGameLogic = () => {
   const [playerName, setPlayerName] = useState<string>("");
   const gameLoopRef = useRef<number | null>(null);
   const lastDropTimeRef = useRef<number>(0);
+  const keysPressed = useRef<Set<string>>(new Set());
+  const lastMoveTimeRef = useRef<{ [key: string]: number }>({});
 
   const spawnNewPiece = useCallback((): Tetromino => {
     const type = gameBoard.nextPiece || getRandomTetromino();
@@ -264,20 +266,47 @@ export const useGameLogic = () => {
     (key: string) => {
       const lowerKey = key.toLowerCase();
 
-      if (lowerKey === CONTROLS.MOVE_LEFT) {
-        moveActivePiece("left");
-      } else if (lowerKey === CONTROLS.MOVE_RIGHT) {
-        moveActivePiece("right");
-      } else if (lowerKey === CONTROLS.MOVE_DOWN) {
-        moveActivePiece("down");
-      } else if (lowerKey === CONTROLS.ROTATE) {
+      // Handle rotation and hard drop immediately (non-continuous)
+      if (lowerKey === CONTROLS.ROTATE) {
         rotateActivePiece();
-      } else if (lowerKey === CONTROLS.HARD_DROP) {
+        return;
+      }
+      
+      if (lowerKey === CONTROLS.HARD_DROP) {
         hardDrop();
+        return;
+      }
+
+      // Add continuous movement keys to pressed set
+      if (
+        lowerKey === CONTROLS.MOVE_LEFT ||
+        lowerKey === CONTROLS.MOVE_RIGHT ||
+        lowerKey === CONTROLS.MOVE_DOWN
+      ) {
+        keysPressed.current.add(lowerKey);
+        
+        // Execute immediate movement on first press
+        const now = Date.now();
+        if (!lastMoveTimeRef.current[lowerKey]) {
+          if (lowerKey === CONTROLS.MOVE_LEFT) {
+            moveActivePiece("left");
+          } else if (lowerKey === CONTROLS.MOVE_RIGHT) {
+            moveActivePiece("right");
+          } else if (lowerKey === CONTROLS.MOVE_DOWN) {
+            moveActivePiece("down");
+          }
+          lastMoveTimeRef.current[lowerKey] = now;
+        }
       }
     },
     [moveActivePiece, rotateActivePiece, hardDrop]
   );
+
+  const handleKeyRelease = useCallback((key: string) => {
+    const lowerKey = key.toLowerCase();
+    keysPressed.current.delete(lowerKey);
+    delete lastMoveTimeRef.current[lowerKey];
+  }, []);
 
   // Game loop
   useEffect(() => {
@@ -289,6 +318,7 @@ export const useGameLogic = () => {
       const minSpeed = 50;
       const actualDropSpeed = Math.max(dropSpeed, minSpeed);
 
+      // Handle automatic piece dropping
       if (
         gameBoard.gameState === GAME_STATES.PLAYING &&
         gameBoard.activePiece &&
@@ -297,6 +327,24 @@ export const useGameLogic = () => {
         moveActivePiece("down");
         lastDropTimeRef.current = now;
       }
+
+      // Handle continuous movement for held keys
+      const moveSpeed = 150; // milliseconds between moves when holding key
+      keysPressed.current.forEach((key) => {
+        if (gameBoard.gameState === GAME_STATES.PLAYING) {
+          const lastMoveTime = lastMoveTimeRef.current[key] || 0;
+          if (now - lastMoveTime > moveSpeed) {
+            if (key === CONTROLS.MOVE_LEFT) {
+              moveActivePiece("left");
+            } else if (key === CONTROLS.MOVE_RIGHT) {
+              moveActivePiece("right");
+            } else if (key === CONTROLS.MOVE_DOWN) {
+              moveActivePiece("down");
+            }
+            lastMoveTimeRef.current[key] = now;
+          }
+        }
+      });
 
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
@@ -318,12 +366,35 @@ export const useGameLogic = () => {
   // Keyboard event listeners
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Prevent default for game keys to avoid browser shortcuts
+      const lowerKey = event.key.toLowerCase();
+      const gameKeys = [
+        CONTROLS.MOVE_LEFT,
+        CONTROLS.MOVE_RIGHT,
+        CONTROLS.MOVE_DOWN,
+        CONTROLS.ROTATE,
+        CONTROLS.HARD_DROP,
+      ];
+      
+      if (gameKeys.includes(lowerKey as any)) {
+        event.preventDefault();
+      }
+      
       handleKeyPress(event.key);
     };
 
+    const handleKeyUp = (event: KeyboardEvent) => {
+      handleKeyRelease(event.key);
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyPress]);
+    window.addEventListener("keyup", handleKeyUp);
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [handleKeyPress, handleKeyRelease]);
 
   return {
     gameBoard,
@@ -333,5 +404,6 @@ export const useGameLogic = () => {
     resetGame,
     createRoom,
     handleKeyPress,
+    handleKeyRelease,
   };
 };

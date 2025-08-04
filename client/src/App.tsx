@@ -5,7 +5,7 @@ import {
   Stack,
   Paper,
   Typography,
-  Chip,
+  Button,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
@@ -14,7 +14,6 @@ import { PauseRounded } from "@mui/icons-material";
 import { GAME_STATES } from "./constants";
 import { useGameLogic } from "./hooks/useGameLogic";
 import WelcomeScreen from "./components/WelcomeScreen";
-import WaitingRoom from "./components/WaitingRoom";
 import GameBoard from "./components/GameBoard";
 import GameInfo from "./components/GameInfo";
 import GameOverScreen from "./components/GameOverScreen";
@@ -41,10 +40,6 @@ const App: React.FC = () => {
       return <WelcomeScreen onCreateRoom={createRoom} />;
     }
 
-    if (gameState === GAME_STATES.WAITING) {
-      return <WaitingRoom playerName={playerName} onStartGame={startGame} />;
-    }
-
     if (gameState === GAME_STATES.GAME_OVER) {
       return (
         <GameOverScreen
@@ -57,15 +52,16 @@ const App: React.FC = () => {
       );
     }
 
-    // Playing or Paused state
+    // WAITING, Playing or Paused state - show game layout
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
         <Stack
           direction={isMobile ? "column" : "row"}
           spacing={4}
           alignItems={isMobile ? "center" : "flex-start"}
           justifyContent="center"
         >
+          {/* Left Side: Game Board */}
           <Box position="relative">
             <GameBoard
               grid={gameBoard.grid}
@@ -117,64 +113,124 @@ const App: React.FC = () => {
             )}
           </Box>
 
-          <GameInfo
-            score={gameBoard.score}
-            lines={gameBoard.lines}
-            level={gameBoard.level}
-            nextPiece={gameBoard.nextPiece}
-          />
-        </Stack>
+          {/* Center: Game Stats & Next Piece */}
+          {gameState === GAME_STATES.PLAYING && (
+            <GameInfo
+              score={gameBoard.score}
+              lines={gameBoard.lines}
+              level={gameBoard.level}
+              nextPiece={gameBoard.nextPiece}
+            />
+          )}
 
-        <Box mt={4}>
-          <Paper
-            elevation={4}
-            sx={{
-              p: 3,
-              background: "rgba(26, 26, 26, 0.9)",
-              border: "1px solid rgba(0, 170, 255, 0.2)",
-            }}
-          >
-            <Typography
-              variant="h5"
-              component="h4"
-              textAlign="center"
-              color="primary.light"
-              gutterBottom
+          {/* Right Side: Toolbar */}
+          <Stack spacing={3} sx={{ minWidth: { xs: "100%", md: 320 } }}>
+            {/* Player Info & Start Game */}
+            <Paper
+              elevation={6}
+              sx={{
+                p: 3,
+                background: "rgba(26, 26, 26, 0.95)",
+                border: "1px solid rgba(0, 204, 102, 0.3)",
+              }}
             >
-              🎮 Game Controls
-            </Typography>
+              <Typography
+                variant="h5"
+                color="success.main"
+                gutterBottom
+                textAlign="center"
+              >
+                👋 Welcome, {playerName}!
+              </Typography>
 
-            <Stack
-              direction={isMobile ? "column" : "row"}
-              spacing={2}
-              justifyContent="center"
-              alignItems="center"
-            >
-              {[
-                { keys: "W A S D", action: "Move pieces" },
-                { keys: "N", action: "Rotate" },
-                { keys: "J", action: "Hard Drop" },
-              ].map((control, index) => (
-                <Chip
-                  key={index}
-                  label={`${control.keys} - ${control.action}`}
-                  variant="outlined"
-                  color="primary"
+              {gameState === GAME_STATES.WAITING && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="large"
+                  fullWidth
+                  onClick={startGame}
                   sx={{
-                    fontSize: "1rem",
-                    py: 1,
-                    px: 2,
-                    transition: "all 0.3s ease",
+                    py: 2,
+                    fontSize: "1.2rem",
+                    fontWeight: 600,
+                    background: "linear-gradient(45deg, #00aa55, #00cc66)",
                     "&:hover": {
-                      background: "rgba(0, 170, 255, 0.1)",
+                      background: "linear-gradient(45deg, #009944, #00bb55)",
                       transform: "translateY(-2px)",
+                      boxShadow: "0 8px 25px rgba(0, 204, 102, 0.4)",
                     },
+                    transition: "all 0.3s ease-in-out",
                   }}
-                />
-              ))}
-            </Stack>
-          </Paper>
-        </Box>
+                >
+                  🎮 Start Game
+                </Button>
+              )}
+
+              {gameState === GAME_STATES.PLAYING && (
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  textAlign="center"
+                >
+                  Game in progress... Good luck! 🍀
+                </Typography>
+              )}
+            </Paper>
+
+            {/* Controls Reminder */}
+            <Paper
+              elevation={4}
+              sx={{
+                p: 3,
+                background: "rgba(26, 26, 26, 0.9)",
+                border: "1px solid rgba(0, 170, 255, 0.2)",
+              }}
+            >
+              <Typography
+                variant="h6"
+                component="h4"
+                textAlign="center"
+                color="primary.light"
+                gutterBottom
+              >
+                🎮 Game Controls
+              </Typography>
+
+              <Stack spacing={1}>
+                {[
+                  { keys: "W A S D", action: "Move pieces" },
+                  { keys: "N", action: "Rotate" },
+                  { keys: "J", action: "Hard Drop" },
+                ].map((control, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      p: 2,
+                      background: "rgba(0, 170, 255, 0.05)",
+                      border: "1px solid rgba(0, 170, 255, 0.2)",
+                      borderRadius: 2,
+                      textAlign: "center",
+                      transition: "all 0.3s ease",
+                      "&:hover": {
+                        background: "rgba(0, 170, 255, 0.1)",
+                        transform: "translateY(-1px)",
+                      },
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.primary"
+                      fontWeight={500}
+                    >
+                      {control.keys} - {control.action}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Paper>
+          </Stack>
+        </Stack>
       </Container>
     );
   };
