@@ -11,6 +11,7 @@ import {
   clearLines,
   calculateScore,
 } from "../utils/gameUtils";
+import { useBot } from "../bot";
 
 const createInitialGameBoard = (): GameBoard => ({
   grid: createEmptyGrid(),
@@ -32,6 +33,13 @@ export const useGameLogic = () => {
   const lastDropTimeRef = useRef<number>(0);
   const keysPressed = useRef<Set<string>>(new Set());
   const lastMoveTimeRef = useRef<{ [key: string]: number }>({});
+
+  // Bot functionality
+  const bot = useBot(
+    (direction: "left" | "right") => moveActivePiece(direction),
+    () => rotateActivePiece(),
+    () => hardDrop()
+  );
 
   const spawnNewPiece = useCallback((): Tetromino => {
     const type = gameBoard.nextPiece || getRandomTetromino();
@@ -363,6 +371,15 @@ export const useGameLogic = () => {
         }
       });
 
+      // Bot decision making
+      if (
+        bot.isEnabled &&
+        gameBoard.gameState === GAME_STATES.PLAYING &&
+        gameBoard.activePiece
+      ) {
+        bot.executeMove(gameBoard, gameBoard.activePiece);
+      }
+
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
 
@@ -378,6 +395,7 @@ export const useGameLogic = () => {
     gameBoard.level,
     gameBoard.activePiece,
     moveActivePiece,
+    bot,
   ]);
 
   // Keyboard event listeners
@@ -438,5 +456,6 @@ export const useGameLogic = () => {
     createRoom,
     handleKeyPress,
     handleKeyRelease,
+    bot,
   };
 };

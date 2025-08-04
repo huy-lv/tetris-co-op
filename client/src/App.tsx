@@ -16,6 +16,7 @@ import { useGameLogic } from "./hooks/useGameLogic";
 import WelcomeScreen from "./components/WelcomeScreen";
 import GameBoard from "./components/GameBoard";
 import GameInfo from "./components/GameInfo";
+import { BotControlPanel } from "./components/BotControlPanel";
 
 const pulseAnimation = keyframes`
   0%, 100% { opacity: 0.8; transform: scale(1); }
@@ -23,7 +24,7 @@ const pulseAnimation = keyframes`
 `;
 
 const App: React.FC = () => {
-  const { gameBoard, playerName, startGame, createRoom } = useGameLogic();
+  const { gameBoard, playerName, startGame, createRoom, bot } = useGameLogic();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -278,6 +279,16 @@ const App: React.FC = () => {
                 ))}
               </Stack>
             </Paper>
+
+            {gameBoard.gameState === GAME_STATES.PLAYING && (
+              <BotControlPanel
+                isEnabled={bot.isEnabled}
+                difficulty={bot.difficulty}
+                onEnabledChange={bot.setEnabled}
+                onDifficultyChange={bot.setDifficulty}
+                currentMove={bot.currentMove}
+              />
+            )}
           </Stack>
         </Stack>
       </Container>
