@@ -46,3 +46,73 @@ export interface Room {
   isStarted: boolean;
   maxPlayers: number;
 }
+
+// Multiplayer event types
+export interface GameWinnerData {
+  winner: Player;
+  finalScores: Player[];
+  totalPlayers: number;
+}
+
+export interface GameEndedData {
+  winner: Player;
+  finalScores: Player[];
+  totalPlayers: number;
+}
+
+export interface RoomJoinedData {
+  roomCode: string;
+  players: Player[];
+  isHost: boolean;
+}
+
+export interface PlayerJoinedData {
+  player: Player;
+  players: Player[];
+  roomCode: string;
+}
+
+export interface PlayerLeftData {
+  playerName: string;
+  players: Player[];
+  roomCode: string;
+}
+
+export interface GameStartedData {
+  players: Player[];
+  startTime: number;
+}
+
+export interface PlayerGameOverData {
+  playerName: string;
+  finalScore: number;
+  playersRemaining: number;
+  totalPlayers: number;
+  allPlayersData: Player[];
+}
+
+export interface MultiplayerGameOverState {
+  isGameOver: boolean;
+  playerName?: string;
+  finalScore?: number;
+  playersRemaining?: number;
+  totalPlayers?: number;
+  allPlayersData?: Player[];
+}
+
+export interface GameWinnerState {
+  hasWinner: boolean;
+  winner: Player | null;
+  finalScores: Player[];
+  totalPlayers: number;
+}
+
+// Game state update for multiplayer sync
+export interface GameStateUpdate {
+  grid?: (TetrominoType | null)[][];
+  score: number;
+  lines: number;
+  level: number;
+  isGameOver: boolean;
+  gameState?: GameState;
+}

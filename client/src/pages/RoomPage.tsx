@@ -33,6 +33,15 @@ import GameBoard from "../components/GameBoard";
 import GameInfo from "../components/GameInfo";
 import SettingsDialog from "../components/SettingsDialog";
 import gameService from "../services/gameService";
+import {
+  MultiplayerGameOverState,
+  RoomJoinedData,
+  PlayerJoinedData,
+  PlayerLeftData,
+  GameStartedData,
+  PlayerGameOverData,
+  Player,
+} from "../types";
 
 const pulseAnimation = keyframes`
   0%, 100% { opacity: 0.8; transform: scale(1); }
@@ -44,27 +53,10 @@ const RoomPage: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
-  const [multiplayerGameOver, setMultiplayerGameOver] = useState<{
-    isGameOver: boolean;
-    playerName?: string;
-    finalScore?: number;
-    playersRemaining?: number;
-    totalPlayers?: number;
-    allPlayersData?: any[];
-  }>({ isGameOver: false });
-  const {
-    gameBoard,
-    gameWinner,
-    playerName,
-    startGame,
-    pauseGame,
-    resetGame,
-    createRoom,
-    handleKeyPress,
-    handleKeyRelease,
-    holdActivePiece,
-    bot,
-  } = useGameLogic(settingsOpen);
+  const [multiplayerGameOver, setMultiplayerGameOver] =
+    useState<MultiplayerGameOverState>({ isGameOver: false });
+  const { gameBoard, gameWinner, playerName, startGame, pauseGame } =
+    useGameLogic(settingsOpen);
   const { roomId, isJoiningRoom, roomError } = useRoomNavigation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -111,35 +103,35 @@ const RoomPage: React.FC = () => {
       setPlayers([playerName]);
 
       // Setup event listeners để cập nhật danh sách players real-time
-      const handleRoomJoined = (data: any) => {
+      const handleRoomJoined = (data: RoomJoinedData) => {
         console.log("Room joined event:", data);
         if (data.players) {
-          setPlayers(data.players.map((p: any) => p.name));
+          setPlayers(data.players.map((p: Player) => p.name));
         }
       };
 
-      const handlePlayerJoined = (data: any) => {
+      const handlePlayerJoined = (data: PlayerJoinedData) => {
         console.log("Player joined event:", data);
         if (data.players) {
-          setPlayers(data.players.map((p: any) => p.name));
+          setPlayers(data.players.map((p: Player) => p.name));
         }
       };
 
-      const handlePlayerLeft = (data: any) => {
+      const handlePlayerLeft = (data: PlayerLeftData) => {
         console.log("Player left event:", data);
         if (data.players) {
-          setPlayers(data.players.map((p: any) => p.name));
+          setPlayers(data.players.map((p: Player) => p.name));
         }
       };
 
-      const handleGameStarted = (data: any) => {
+      const handleGameStarted = (data: GameStartedData) => {
         console.log("Game started event:", data);
         if (data.players) {
-          setPlayers(data.players.map((p: any) => p.name));
+          setPlayers(data.players.map((p: Player) => p.name));
         }
       };
 
-      const handlePlayerGameOver = (data: any) => {
+      const handlePlayerGameOver = (data: PlayerGameOverData) => {
         console.log("Player game over event:", data);
         if (data.playerName !== playerName) {
           // Chỉ hiện thông báo nếu không phải mình game over
@@ -548,7 +540,7 @@ const RoomPage: React.FC = () => {
                       }}
                     >
                       {gameWinner.finalScores?.map(
-                        (player: any, index: number) => (
+                        (player: Player, index: number) => (
                           <Box
                             key={index}
                             sx={{

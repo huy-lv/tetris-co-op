@@ -1,5 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { GameBoard, Tetromino, Position, TetrominoType } from "../types";
+import {
+  GameBoard,
+  Tetromino,
+  Position,
+  TetrominoType,
+  GameWinnerState,
+  RoomJoinedData,
+  GameStartedData,
+  GameWinnerData,
+  GameEndedData,
+} from "../types";
 import { GAME_CONFIG, GAME_STATES } from "../constants";
 import {
   createEmptyGrid,
@@ -39,12 +49,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     // Load player name from localStorage on initialization
     return localStorage.getItem("tetris_player_name") || "";
   });
-  const [gameWinner, setGameWinner] = useState<{
-    hasWinner: boolean;
-    winner: any;
-    finalScores: any[];
-    totalPlayers: number;
-  }>({
+  const [gameWinner, setGameWinner] = useState<GameWinnerState>({
     hasWinner: false,
     winner: null,
     finalScores: [],
@@ -58,7 +63,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   // Listen for successful room join to transition from WELCOME to WAITING
   useEffect(() => {
     // Setup event listener for successful room join
-    const handleRoomJoined = (_data: any) => {
+    const handleRoomJoined = (_data: RoomJoinedData) => {
       console.log(
         "🎮 Room joined successfully, transitioning to WAITING state"
       );
@@ -69,7 +74,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     };
 
     // Setup event listener for game started by other player
-    const handleGameStarted = (data: any) => {
+    const handleGameStarted = (data: GameStartedData) => {
       console.log("🎮 Game started by other player:", data);
       setGameBoard((prev: GameBoard) => {
         if (prev.gameState === GAME_STATES.WAITING) {
@@ -93,9 +98,9 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     };
 
     // Setup event listener for when someone wins
-    const handleGameWinner = (data: any) => {
+    const handleGameWinner = (data: GameWinnerData) => {
       console.log("🎮 Game winner detected, stopping game:", data);
-      
+
       // Set gameWinner state cho tất cả người chơi
       setGameWinner({
         hasWinner: true,
@@ -128,9 +133,9 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     };
 
     // Setup event listener for when game ends
-    const handleGameEnded = (data: any) => {
+    const handleGameEnded = (data: GameEndedData) => {
       console.log("🎮 Game ended, stopping game:", data);
-      
+
       // Set gameWinner state cho tất cả người chơi
       setGameWinner({
         hasWinner: true,
@@ -754,7 +759,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
 
       // Setup multiplayer event handlers
       gameService.onPlayerJoined = (data) => {
-        console.log(`👤 Player joined: ${data.newPlayer}`);
+        console.log(`👤 Player joined: ${data.player.name}`);
         // Có thể thêm notification ở đây
       };
 
@@ -791,11 +796,11 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         currentControls.ROTATE,
         currentControls.HARD_DROP,
         currentControls.HOLD,
-      ];
+      ] as const;
 
       if (
         gameBoard.gameState === GAME_STATES.PAUSED &&
-        movementKeys.includes(lowerKey as any)
+        movementKeys.includes(lowerKey as (typeof movementKeys)[number])
       ) {
         // Resume game first
         setGameBoard((prev: GameBoard) => ({
@@ -965,9 +970,9 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         currentControls.ROTATE,
         currentControls.HARD_DROP,
         currentControls.HOLD,
-      ];
+      ] as const;
 
-      if (gameKeys.includes(lowerKey as any)) {
+      if (gameKeys.includes(lowerKey as (typeof gameKeys)[number])) {
         event.preventDefault();
       }
 

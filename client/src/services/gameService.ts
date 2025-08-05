@@ -1,9 +1,21 @@
 import { getStoredPlayerName, storePlayerName } from "../utils/nameGenerator";
+import { io, Socket } from "socket.io-client";
+import {
+  RoomJoinedData,
+  PlayerJoinedData,
+  PlayerLeftData,
+  GameStartedData,
+  PlayerGameOverData,
+  GameWinnerData,
+  GameEndedData,
+  Player,
+  GameStateUpdate,
+} from "../types";
 
 class SimpleGameService {
   private roomCode: string | null = null;
   private serverUrl = "http://localhost:5001";
-  private socket: any = null;
+  private socket: Socket | null = null;
 
   // Tự động tạo phòng khi game bắt đầu
   async createRoom(playerName: string): Promise<string> {
@@ -53,7 +65,6 @@ class SimpleGameService {
   // Kết nối socket chỉ khi cần
   private async connectSocket(playerName: string = "Player"): Promise<void> {
     if (!this.socket && this.roomCode) {
-      const { io } = await import("socket.io-client");
       this.socket = io(this.serverUrl);
 
       this.socket.emit("join_room", {
@@ -69,45 +80,45 @@ class SimpleGameService {
   private setupMultiplayerEvents(): void {
     if (!this.socket) return;
 
-    this.socket.on("room_joined", (data: any) => {
+    this.socket.on("room_joined", (data: RoomJoinedData) => {
       console.log("Room joined:", data);
-      this.currentPlayers = data.players?.map((p: any) => p.name) || [];
+      this.currentPlayers = data.players?.map((p: Player) => p.name) || [];
       this.onRoomJoined?.(data);
     });
 
-    this.socket.on("player_joined", (data: any) => {
+    this.socket.on("player_joined", (data: PlayerJoinedData) => {
       console.log("New player joined:", data);
-      this.currentPlayers = data.players?.map((p: any) => p.name) || [];
+      this.currentPlayers = data.players?.map((p: Player) => p.name) || [];
       this.onPlayerJoined?.(data);
     });
 
-    this.socket.on("player_left", (data: any) => {
+    this.socket.on("player_left", (data: PlayerLeftData) => {
       console.log("Player left:", data);
-      this.currentPlayers = data.players?.map((p: any) => p.name) || [];
+      this.currentPlayers = data.players?.map((p: Player) => p.name) || [];
       this.onPlayerLeft?.(data);
     });
 
-    this.socket.on("game_started", (data: any) => {
+    this.socket.on("game_started", (data: GameStartedData) => {
       console.log("Game started by:", data);
       this.onGameStarted?.(data);
     });
 
-    this.socket.on("player_game_over", (data: any) => {
+    this.socket.on("player_game_over", (data: PlayerGameOverData) => {
       console.log("Player game over:", data);
       this.onPlayerGameOver?.(data);
     });
 
-    this.socket.on("game_winner", (data: any) => {
+    this.socket.on("game_winner", (data: GameWinnerData) => {
       console.log("Game winner:", data);
       this.onGameWinner?.(data);
     });
 
-    this.socket.on("game_ended", (data: any) => {
+    this.socket.on("game_ended", (data: GameEndedData) => {
       console.log("Game ended:", data);
       this.onGameEnded?.(data);
     });
 
-    this.socket.on("error", (data: any) => {
+    this.socket.on("error", (data: { message?: string; error?: string }) => {
       console.error("Socket error:", data);
 
       // Nếu room không tồn tại, tự động tạo room mới
@@ -160,20 +171,20 @@ class SimpleGameService {
   }
 
   // Callbacks for multiplayer events
-  onPlayerJoined?: (data: any) => void;
-  onPlayerLeft?: (data: any) => void;
-  onRoomJoined?: (data: any) => void;
-  onGameStarted?: (data: any) => void;
-  onGameStateUpdate?: (data: any) => void;
-  onPlayerGameOver?: (data: any) => void;
-  onGameWinner?: (data: any) => void;
-  onGameEnded?: (data: any) => void;
+  onPlayerJoined?: (data: PlayerJoinedData) => void;
+  onPlayerLeft?: (data: PlayerLeftData) => void;
+  onRoomJoined?: (data: RoomJoinedData) => void;
+  onGameStarted?: (data: GameStartedData) => void;
+  onGameStateUpdate?: (data: unknown) => void;
+  onPlayerGameOver?: (data: PlayerGameOverData) => void;
+  onGameWinner?: (data: GameWinnerData) => void;
+  onGameEnded?: (data: GameEndedData) => void;
 
   // Current room players
   private currentPlayers: string[] = [];
 
   // Update game state (chỉ khi có socket connection)
-  updateGameState(gameState: any): void {
+  updateGameState(gameState: GameStateUpdate): void {
     if (this.socket && this.roomCode) {
       this.socket.emit("game_state_update", gameState);
     }
