@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -10,13 +10,18 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { keyframes } from "@emotion/react";
-import { PauseRounded } from "@mui/icons-material";
+import {
+  PauseRounded,
+  SettingsRounded,
+  PlayArrowRounded,
+} from "@mui/icons-material";
 import { GAME_STATES } from "./constants";
 import { useGameLogic } from "./hooks/useGameLogic";
 import WelcomeScreen from "./components/WelcomeScreen";
 import GameBoard from "./components/GameBoard";
 import GameInfo from "./components/GameInfo";
 import { BotControlPanel } from "./components/BotControlPanel";
+import SettingsDialog from "./components/SettingsDialog";
 
 const pulseAnimation = keyframes`
   0%, 100% { opacity: 0.8; transform: scale(1); }
@@ -24,9 +29,23 @@ const pulseAnimation = keyframes`
 `;
 
 const App: React.FC = () => {
-  const { gameBoard, playerName, startGame, createRoom, bot } = useGameLogic();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { gameBoard, playerName, startGame, createRoom, pauseGame, bot } =
+    useGameLogic(settingsOpen);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  const handleSettingsOpen = () => {
+    // Pause game when opening settings if game is playing
+    if (gameBoard.gameState === GAME_STATES.PLAYING && !gameBoard.isPaused) {
+      pauseGame();
+    }
+    setSettingsOpen(true);
+  };
+
+  const handleSettingsClose = () => {
+    setSettingsOpen(false);
+  };
 
   const renderGameContent = () => {
     const { gameState } = gameBoard;
@@ -54,7 +73,7 @@ const App: React.FC = () => {
               ghostPiece={gameBoard.ghostPiece}
             />
 
-            {gameState === GAME_STATES.PAUSED && (
+            {gameBoard.isPaused && gameState === GAME_STATES.PLAYING && (
               <Box
                 position="absolute"
                 top={0}
@@ -231,6 +250,74 @@ const App: React.FC = () => {
               )}
             </Paper>
 
+            {/* Settings Button */}
+            <Paper
+              elevation={4}
+              sx={{
+                p: 3,
+                background: "rgba(26, 26, 26, 0.9)",
+                border: "1px solid rgba(255, 170, 0, 0.2)",
+              }}
+            >
+              <Typography
+                variant="h6"
+                component="h4"
+                textAlign="center"
+                color="warning.light"
+                gutterBottom
+              >
+                ⚙️ Cài đặt
+              </Typography>
+
+              <Button
+                variant="contained"
+                color="warning"
+                fullWidth
+                onClick={handleSettingsOpen}
+                startIcon={<SettingsRounded />}
+                sx={{
+                  py: 1.5,
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  background: "linear-gradient(45deg, #ff8f00, #ffab00)",
+                  "&:hover": {
+                    background: "linear-gradient(45deg, #e68900, #ff9500)",
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 8px 25px rgba(255, 171, 0, 0.4)",
+                  },
+                  transition: "all 0.3s ease-in-out",
+                }}
+              >
+                Mở cài đặt
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={pauseGame}
+                startIcon={
+                  gameBoard.isPaused ? <PlayArrowRounded /> : <PauseRounded />
+                }
+                sx={{
+                  mt: 2,
+                  py: 1.5,
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  background: gameBoard.isPaused
+                    ? "linear-gradient(45deg, #00c853, #4caf50)"
+                    : "linear-gradient(45deg, #2196f3, #00bcd4)",
+                  "&:hover": {
+                    background: gameBoard.isPaused
+                      ? "linear-gradient(45deg, #00a83a, #43a047)"
+                      : "linear-gradient(45deg, #1976d2, #0097a7)",
+                    transform: "translateY(-2px)",
+                  },
+                }}
+              >
+                {gameBoard.isPaused ? "Tiếp tục game" : "Tạm dừng game"}
+              </Button>
+            </Paper>
+
             {/* Controls Reminder */}
             <Paper
               elevation={4}
@@ -295,6 +382,9 @@ const App: React.FC = () => {
             )}
           </Stack>
         </Stack>
+
+        {/* Settings Dialog */}
+        <SettingsDialog open={settingsOpen} onClose={handleSettingsClose} />
       </Container>
     );
   };

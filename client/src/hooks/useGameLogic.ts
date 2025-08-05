@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { GameBoard, Tetromino, Position, TetrominoType } from "../types";
-import { GAME_CONFIG, GAME_STATES, CONTROLS } from "../constants";
+import { GAME_CONFIG, GAME_STATES } from "../constants";
 import {
   createEmptyGrid,
   getRandomTetromino,
@@ -12,6 +12,7 @@ import {
   calculateScore,
 } from "../utils/gameUtils";
 import { useBot } from "../bot";
+import { getControlsFromStorage } from "../utils/controlsUtils";
 
 const createInitialGameBoard = (): GameBoard => ({
   grid: createEmptyGrid(),
@@ -24,9 +25,10 @@ const createInitialGameBoard = (): GameBoard => ({
   lines: 0,
   level: 0,
   gameState: GAME_STATES.WELCOME,
+  isPaused: false, // Add pause state
 });
 
-export const useGameLogic = () => {
+export const useGameLogic = (settingsOpen: boolean = false) => {
   const [gameBoard, setGameBoard] = useState<GameBoard>(createInitialGameBoard);
   const [playerName, setPlayerName] = useState<string>(() => {
     // Load player name from localStorage on initialization
@@ -388,10 +390,7 @@ export const useGameLogic = () => {
   const pauseGame = useCallback(() => {
     setGameBoard((prev: GameBoard) => ({
       ...prev,
-      gameState:
-        prev.gameState === GAME_STATES.PLAYING
-          ? GAME_STATES.PAUSED
-          : GAME_STATES.PLAYING,
+      isPaused: !prev.isPaused,
     }));
   }, []);
 
@@ -411,29 +410,53 @@ export const useGameLogic = () => {
 
   const handleKeyPress = useCallback(
     (key: string) => {
+      // Don't handle any game keys when settings is open
+      if (settingsOpen) {
+        return;
+      }
+
       const lowerKey = key.toLowerCase();
+      const currentControls = getControlsFromStorage();
+
+      // Auto-resume game if paused and movement key is pressed
+      const movementKeys = [
+        currentControls.MOVE_LEFT,
+        currentControls.MOVE_RIGHT,
+        currentControls.MOVE_DOWN,
+        currentControls.ROTATE,
+        currentControls.HARD_DROP,
+        currentControls.HOLD,
+      ];
+
+      if (gameBoard.isPaused && movementKeys.includes(lowerKey as any)) {
+        // Resume game first
+        setGameBoard((prev: GameBoard) => ({
+          ...prev,
+          isPaused: false,
+        }));
+      }
 
       // Handle rotation and hard drop immediately (non-continuous)
-      if (lowerKey === CONTROLS.ROTATE) {
+      if (lowerKey === currentControls.ROTATE) {
         rotateActivePiece();
         return;
       }
 
-      if (lowerKey === CONTROLS.HARD_DROP) {
+      if (lowerKey === currentControls.HARD_DROP) {
         hardDrop();
         return;
       }
 
-      if (lowerKey === CONTROLS.HOLD) {
+      if (lowerKey === currentControls.HOLD) {
         holdActivePiece();
         return;
       }
 
       // Add continuous movement keys to pressed set
       if (
-        lowerKey === CONTROLS.MOVE_LEFT ||
-        lowerKey === CONTROLS.MOVE_RIGHT ||
-        lowerKey === CONTROLS.MOVE_DOWN
+        lowerKey === currentControls.MOVE_LEFT ||
+        lowerKey === currentControls.MOVE_RIGHT ||
+        lowerKey === currentControls.MOVE_DOWN
       ) {
         keysPressed.current.add(lowerKey);
 
@@ -443,18 +466,25 @@ export const useGameLogic = () => {
         lastMoveTimeRef.current[lowerKey + "_start"] = now;
 
         if (!lastMoveTimeRef.current[lowerKey]) {
-          if (lowerKey === CONTROLS.MOVE_LEFT) {
+          if (lowerKey === currentControls.MOVE_LEFT) {
             moveActivePiece("left");
-          } else if (lowerKey === CONTROLS.MOVE_RIGHT) {
+          } else if (lowerKey === currentControls.MOVE_RIGHT) {
             moveActivePiece("right");
-          } else if (lowerKey === CONTROLS.MOVE_DOWN) {
+          } else if (lowerKey === currentControls.MOVE_DOWN) {
             moveActivePiece("down");
           }
           lastMoveTimeRef.current[lowerKey] = now;
         }
       }
     },
-    [moveActivePiece, rotateActivePiece, hardDrop, holdActivePiece]
+    [
+      moveActivePiece,
+      rotateActivePiece,
+      hardDrop,
+      holdActivePiece,
+      gameBoard.isPaused,
+      settingsOpen,
+    ]
   );
 
   const handleKeyRelease = useCallback((key: string) => {
@@ -477,6 +507,7 @@ export const useGameLogic = () => {
       // Handle automatic piece dropping
       if (
         gameBoard.gameState === GAME_STATES.PLAYING &&
+        !gameBoard.isPaused &&
         gameBoard.activePiece &&
         now - lastDropTimeRef.current > actualDropSpeed
       ) {
@@ -486,9 +517,14 @@ export const useGameLogic = () => {
 
       // Handle continuous movement for held keys with acceleration
       keysPressed.current.forEach((key) => {
-        if (gameBoard.gameState === GAME_STATES.PLAYING) {
+        if (
+          gameBoard.gameState === GAME_STATES.PLAYING &&
+          !gameBoard.isPaused &&
+          !settingsOpen
+        ) {
           const lastMoveTime = lastMoveTimeRef.current[key] || 0;
           const holdDuration = now - lastMoveTime;
+          const currentControls = getControlsFromStorage();
 
           // Calculate adaptive move speed: faster the longer the key is held
           // Initial speed: 150ms, reduces to 50ms after holding for 1 second
@@ -505,11 +541,11 @@ export const useGameLogic = () => {
           const currentMoveSpeed = baseMoveSpeed - speedReduction;
 
           if (holdDuration > currentMoveSpeed) {
-            if (key === CONTROLS.MOVE_LEFT) {
+            if (key === currentControls.MOVE_LEFT) {
               moveActivePiece("left");
-            } else if (key === CONTROLS.MOVE_RIGHT) {
+            } else if (key === currentControls.MOVE_RIGHT) {
               moveActivePiece("right");
-            } else if (key === CONTROLS.MOVE_DOWN) {
+            } else if (key === currentControls.MOVE_DOWN) {
               moveActivePiece("down");
             }
             lastMoveTimeRef.current[key] = now;
@@ -521,6 +557,7 @@ export const useGameLogic = () => {
       if (
         bot.isEnabled &&
         gameBoard.gameState === GAME_STATES.PLAYING &&
+        !gameBoard.isPaused &&
         gameBoard.activePiece
       ) {
         bot.executeMove(gameBoard, gameBoard.activePiece);
@@ -540,6 +577,8 @@ export const useGameLogic = () => {
     gameBoard.gameState,
     gameBoard.level,
     gameBoard.activePiece,
+    gameBoard.isPaused,
+    settingsOpen,
     moveActivePiece,
     bot,
   ]);
@@ -557,13 +596,14 @@ export const useGameLogic = () => {
 
       // Prevent default for game keys to avoid browser shortcuts
       const lowerKey = event.key.toLowerCase();
+      const currentControls = getControlsFromStorage();
       const gameKeys = [
-        CONTROLS.MOVE_LEFT,
-        CONTROLS.MOVE_RIGHT,
-        CONTROLS.MOVE_DOWN,
-        CONTROLS.ROTATE,
-        CONTROLS.HARD_DROP,
-        CONTROLS.HOLD,
+        currentControls.MOVE_LEFT,
+        currentControls.MOVE_RIGHT,
+        currentControls.MOVE_DOWN,
+        currentControls.ROTATE,
+        currentControls.HARD_DROP,
+        currentControls.HOLD,
       ];
 
       if (gameKeys.includes(lowerKey as any)) {

@@ -27,6 +27,7 @@ export interface GameBoard {
   lines: number;
   level: number;
   gameState: GameState;
+  isPaused: boolean; // Pause state for the game
 }
 
 export interface Player {
