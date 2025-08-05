@@ -248,29 +248,6 @@ const VirtualControls: React.FC<VirtualControlsProps> = ({
           gap: "0.5vw",
         }}
       >
-        {/* Rotate */}
-        <Box sx={{ flex: 1, aspectRatio: "1" }}>
-          <IconButton
-            sx={buttonStyle}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              handleStart(onRotate, "rotate");
-            }}
-            onPointerUp={(e) => {
-              e.preventDefault();
-              handleEnd("rotate");
-              onRotateRelease();
-            }}
-            onPointerLeave={(e) => {
-              e.preventDefault();
-              handleEnd("rotate");
-              onRotateRelease();
-            }}
-          >
-            <RotateRight sx={{ fontSize: "min(6vw, 24px)" }} />
-          </IconButton>
-        </Box>
-
         {/* Hard Drop */}
         <Box sx={{ flex: 1, aspectRatio: "1" }}>
           <IconButton
@@ -291,6 +268,29 @@ const VirtualControls: React.FC<VirtualControlsProps> = ({
             }}
           >
             <KeyboardArrowDown sx={{ fontSize: "min(6vw, 24px)" }} />
+          </IconButton>
+        </Box>
+
+        {/* Rotate */}
+        <Box sx={{ flex: 1, aspectRatio: "1" }}>
+          <IconButton
+            sx={buttonStyle}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              handleStart(onRotate, "rotate");
+            }}
+            onPointerUp={(e) => {
+              e.preventDefault();
+              handleEnd("rotate");
+              onRotateRelease();
+            }}
+            onPointerLeave={(e) => {
+              e.preventDefault();
+              handleEnd("rotate");
+              onRotateRelease();
+            }}
+          >
+            <RotateRight sx={{ fontSize: "min(6vw, 24px)" }} />
           </IconButton>
         </Box>
       </Box>

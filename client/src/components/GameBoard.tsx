@@ -167,7 +167,7 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
                 height: blockSize,
                 backgroundColor: finalCell
                   ? getTetrominoColor(finalCell, isGhost)
-                  : "transparent",
+                  : "rgba(0, 0, 0, 0.4)",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
                 position: "relative",
                 animation: isClearing
@@ -221,14 +221,14 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
       sx={{
         display: "inline-block",
         background:
-          "linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(26, 26, 26, 0.9))",
+          "linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(10, 10, 10, 0.95))",
         backdropFilter: "blur(10px)",
         border: "3px solid rgba(0, 170, 255, 0.3)",
         borderRadius: 3,
         padding: 2,
         boxShadow: `
           0 0 30px rgba(0, 170, 255, 0.2),
-          inset 0 0 30px rgba(0, 0, 0, 0.5)
+          inset 0 0 30px rgba(0, 0, 0, 0.7)
         `,
         position: "relative",
         animation: isShaking
