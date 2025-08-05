@@ -30,15 +30,6 @@ interface GameInfoProps {
   canHold: boolean;
 }
 
-const pulseGlow = keyframes`
-  0%, 100% { 
-    box-shadow: 0 0 5px rgba(0, 170, 255, 0.3);
-  }
-  50% { 
-    box-shadow: 0 0 20px rgba(0, 170, 255, 0.6);
-  }
-`;
-
 const GameInfo: React.FC<GameInfoProps> = ({
   score,
   lines,
@@ -78,7 +69,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
         maxWidth: isMobile ? "100%" : 300,
       }}
     >
-      <Stack spacing={2}>
+      <Stack spacing={2} direction={isMobile ? "row" : "column"}>
         {/* Stats Card */}
         <Card
           elevation={6}
@@ -86,14 +77,14 @@ const GameInfo: React.FC<GameInfoProps> = ({
             background: "rgba(26, 26, 26, 0.95)",
             backdropFilter: "blur(10px)",
             border: "1px solid rgba(0, 170, 255, 0.2)",
-            animation: `${pulseGlow} 3s ease-in-out infinite`,
+            flex: isMobile ? 1 : "none",
           }}
         >
-          <CardContent sx={{ p: 3 }}>
+          <CardContent sx={{ p: isMobile ? 2 : 3 }}>
             <Stack
-              spacing={2}
+              spacing={isMobile ? 1 : 2}
               sx={{
-                p: 2,
+                p: isMobile ? 1 : 2,
                 background: "rgba(0, 0, 0, 0.3)",
                 borderRadius: 2,
                 border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -114,7 +105,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
                     <Box display="flex" alignItems="center" gap={1}>
                       <Box sx={{ color: stat.color }}>{stat.icon}</Box>
                       <Typography
-                        variant="h6"
+                        variant={isMobile ? "body2" : "h6"}
                         color="text.secondary"
                         fontWeight={500}
                       >
@@ -123,13 +114,14 @@ const GameInfo: React.FC<GameInfoProps> = ({
                     </Box>
                     <Chip
                       label={stat.value}
+                      size={isMobile ? "small" : "medium"}
                       sx={{
                         backgroundColor: stat.color,
                         color: "white",
                         fontWeight: "bold",
-                        fontSize: "1rem",
+                        fontSize: isMobile ? "0.8rem" : "1rem",
                         "& .MuiChip-label": {
-                          px: 2,
+                          px: isMobile ? 1 : 2,
                         },
                       }}
                     />
@@ -148,19 +140,26 @@ const GameInfo: React.FC<GameInfoProps> = ({
               background: "rgba(26, 26, 26, 0.95)",
               backdropFilter: "blur(10px)",
               border: "1px solid rgba(0, 170, 255, 0.2)",
+              flex: isMobile ? "0 0 auto" : "none",
             }}
           >
-            <CardContent sx={{ p: 3 }}>
+            <CardContent sx={{ p: isMobile ? 2 : 3 }}>
               <Typography
-                variant="h6"
+                variant={isMobile ? "body2" : "h6"}
                 component="h4"
                 textAlign="center"
                 color="primary.light"
                 gutterBottom
-                sx={{ mb: 2 }}
+                sx={{ mb: isMobile ? 1 : 2 }}
               >
-                <ExtensionRounded sx={{ mr: 1, verticalAlign: "middle" }} />
-                Next Piece
+                <ExtensionRounded
+                  sx={{
+                    mr: 1,
+                    verticalAlign: "middle",
+                    fontSize: isMobile ? "1rem" : "1.25rem",
+                  }}
+                />
+                Next
               </Typography>
 
               <Box
@@ -168,22 +167,22 @@ const GameInfo: React.FC<GameInfoProps> = ({
                 justifyContent="center"
                 alignItems="center"
                 sx={{
-                  minHeight: 100,
+                  minHeight: isMobile ? 60 : 100,
                   background: "rgba(0, 0, 0, 0.2)",
                   borderRadius: 2,
                   border: "1px solid rgba(255, 255, 255, 0.1)",
                 }}
               >
-                <NextPiece type={nextPiece} blockSize={18} />
+                <NextPiece type={nextPiece} blockSize={isMobile ? 12 : 18} />
               </Box>
 
               <Typography
-                variant="body2"
+                variant="caption"
                 textAlign="center"
                 color="text.secondary"
-                sx={{ mt: 1 }}
+                sx={{ mt: 1, display: "block" }}
               >
-                Type: {nextPiece.toUpperCase()}
+                {nextPiece.toUpperCase()}
               </Typography>
             </CardContent>
           </Card>
@@ -199,19 +198,26 @@ const GameInfo: React.FC<GameInfoProps> = ({
               canHold ? "rgba(0, 170, 255, 0.2)" : "rgba(255, 50, 50, 0.2)"
             }`,
             opacity: canHold ? 1 : 0.7,
+            flex: isMobile ? "0 0 auto" : "none",
           }}
         >
-          <CardContent sx={{ p: 3 }}>
+          <CardContent sx={{ p: isMobile ? 2 : 3 }}>
             <Typography
-              variant="h6"
+              variant={isMobile ? "body2" : "h6"}
               component="h4"
               textAlign="center"
               color={canHold ? "primary.light" : "error.light"}
               gutterBottom
-              sx={{ mb: 2 }}
+              sx={{ mb: isMobile ? 1 : 2 }}
             >
-              <PanToolRounded sx={{ mr: 1, verticalAlign: "middle" }} />
-              Hold Piece
+              <PanToolRounded
+                sx={{
+                  mr: 1,
+                  verticalAlign: "middle",
+                  fontSize: isMobile ? "1rem" : "1.25rem",
+                }}
+              />
+              Hold
             </Typography>
 
             <Box
@@ -219,30 +225,28 @@ const GameInfo: React.FC<GameInfoProps> = ({
               justifyContent="center"
               alignItems="center"
               sx={{
-                minHeight: 100,
+                minHeight: isMobile ? 60 : 100,
                 background: "rgba(0, 0, 0, 0.2)",
                 borderRadius: 2,
                 border: "1px solid rgba(255, 255, 255, 0.1)",
               }}
             >
               {holdPiece ? (
-                <HoldPiece type={holdPiece} blockSize={18} />
+                <HoldPiece type={holdPiece} blockSize={isMobile ? 12 : 18} />
               ) : (
-                <Typography color="text.secondary" variant="body2">
-                  No piece held
+                <Typography color="text.secondary" variant="caption">
+                  Empty
                 </Typography>
               )}
             </Box>
 
             <Typography
-              variant="body2"
+              variant="caption"
               textAlign="center"
               color="text.secondary"
-              sx={{ mt: 1 }}
+              sx={{ mt: 1, display: "block" }}
             >
-              {holdPiece
-                ? `Type: ${holdPiece.toUpperCase()}`
-                : "Press B to hold a piece"}
+              {holdPiece ? holdPiece.toUpperCase() : "Press B"}
             </Typography>
           </CardContent>
         </Card>

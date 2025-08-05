@@ -10,8 +10,9 @@ import {
   useMediaQuery,
   CircularProgress,
   Alert,
+  Fab,
 } from "@mui/material";
-import { HomeRounded } from "@mui/icons-material";
+import { HomeRounded, Menu } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { GAME_STATES } from "../constants";
 import { useGameLogic } from "../hooks/useGameLogic";
@@ -24,6 +25,7 @@ import WinnerPopup from "../components/WinnerPopup";
 import GameOverPopup from "../components/GameOverPopup";
 import MultiplayerGameOverNotification from "../components/MultiplayerGameOverNotification";
 import PauseOverlay from "../components/PauseOverlay";
+import MobileSidebarPopup from "../components/MobileSidebarPopup";
 import RoomSidebar from "../components/RoomSidebar";
 import gameService from "../services/gameService";
 import {
@@ -39,6 +41,7 @@ import {
 const RoomPage: React.FC = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [players, setPlayers] = useState<string[]>([]);
   const [multiplayerGameOver, setMultiplayerGameOver] =
@@ -262,6 +265,7 @@ const RoomPage: React.FC = () => {
     <Box
       sx={{
         minHeight: "100vh",
+        width: "100%",
         background:
           "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)",
         display: "flex",
@@ -285,84 +289,202 @@ const RoomPage: React.FC = () => {
       }}
     >
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Stack
-          direction={isMobile ? "column" : "row"}
-          spacing={4}
-          alignItems={isMobile ? "center" : "flex-start"}
-          justifyContent="center"
-        >
-          {/* Left Side: Game Board */}
-          <Box position="relative">
-            <GameBoard
-              grid={gameBoard.grid}
-              activePiece={gameBoard.activePiece}
-              ghostPiece={gameBoard.ghostPiece}
-              clearingRows={gameBoard.clearingRows}
-              dropPosition={gameBoard.dropPosition}
-              isShaking={gameBoard.isShaking}
-            />
+        {isMobile ? (
+          /* Mobile Layout */
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              height: "calc(100vh - 64px)",
+              width: "100%",
+              gap: 1,
+              px: 1,
+            }}
+          >
+            {/* Mobile Game Info - Top */}
+            <Box
+              sx={{
+                width: "100%",
+                maxWidth: "400px",
+                flexShrink: 0,
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <GameInfo
+                score={gameBoard.score}
+                lines={gameBoard.lines}
+                level={gameBoard.level}
+                nextPiece={gameBoard.nextPiece}
+                holdPiece={gameBoard.holdPiece}
+                canHold={gameBoard.canHold}
+              />
+            </Box>
 
-            <PauseOverlay
-              isVisible={gameBoard.gameState === GAME_STATES.PAUSED}
-            />
+            {/* Mobile Game Board - Center */}
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+                minHeight: 0,
+              }}
+            >
+              <Box position="relative">
+                <GameBoard
+                  grid={gameBoard.grid}
+                  activePiece={gameBoard.activePiece}
+                  ghostPiece={gameBoard.ghostPiece}
+                  clearingRows={gameBoard.clearingRows}
+                  dropPosition={gameBoard.dropPosition}
+                  isShaking={gameBoard.isShaking}
+                />
 
-            {/* Game Over Popup - chỉ hiện cho người thua hoặc single player game over */}
-            <GameOverPopup
-              isVisible={
-                gameBoard.gameState === GAME_STATES.GAME_OVER &&
-                !(
+                <PauseOverlay
+                  isVisible={gameBoard.gameState === GAME_STATES.PAUSED}
+                />
+
+                <GameOverPopup
+                  isVisible={
+                    gameBoard.gameState === GAME_STATES.GAME_OVER &&
+                    !(
+                      gameWinner.hasWinner &&
+                      gameWinner.winner?.name === playerName
+                    )
+                  }
+                  score={gameBoard.score}
+                  lines={gameBoard.lines}
+                  level={gameBoard.level}
+                  onPlayAgain={() => window.location.reload()}
+                  onLeaveRoom={handleGoHome}
+                />
+
+                <WinnerPopup
+                  isVisible={
+                    gameWinner.hasWinner &&
+                    gameWinner.winner?.name === playerName
+                  }
+                  winner={gameWinner.winner}
+                  finalScores={gameWinner.finalScores}
+                  playerName={playerName}
+                  onPlayAgain={() => window.location.reload()}
+                />
+              </Box>
+            </Box>
+
+            {/* Mobile Menu Button */}
+            <Fab
+              color="primary"
+              onClick={() => setMobileSidebarOpen(true)}
+              sx={{
+                position: "fixed",
+                bottom: 16,
+                right: 16,
+                zIndex: 1000,
+              }}
+            >
+              <Menu />
+            </Fab>
+
+            {/* Mobile Sidebar Popup */}
+            <MobileSidebarPopup
+              open={mobileSidebarOpen}
+              onClose={() => setMobileSidebarOpen(false)}
+              roomCode={roomCode}
+              roomId={roomId}
+              players={players}
+              playerName={playerName}
+              gameBoard={gameBoard}
+              gameWinner={gameWinner}
+              onCopyRoomCode={handleCopyRoomCode}
+              onStartGame={startGame}
+              onPauseGame={pauseGame}
+              onGoHome={handleGoHome}
+              onSettingsOpen={handleSettingsOpen}
+            />
+          </Box>
+        ) : (
+          /* Desktop Layout */
+          <Stack
+            direction="row"
+            spacing={4}
+            alignItems="flex-start"
+            justifyContent="center"
+          >
+            {/* Left Side: Game Board */}
+            <Box position="relative">
+              <GameBoard
+                grid={gameBoard.grid}
+                activePiece={gameBoard.activePiece}
+                ghostPiece={gameBoard.ghostPiece}
+                clearingRows={gameBoard.clearingRows}
+                dropPosition={gameBoard.dropPosition}
+                isShaking={gameBoard.isShaking}
+              />
+
+              <PauseOverlay
+                isVisible={gameBoard.gameState === GAME_STATES.PAUSED}
+              />
+
+              <GameOverPopup
+                isVisible={
+                  gameBoard.gameState === GAME_STATES.GAME_OVER &&
+                  !(
+                    gameWinner.hasWinner &&
+                    gameWinner.winner?.name === playerName
+                  )
+                }
+                score={gameBoard.score}
+                lines={gameBoard.lines}
+                level={gameBoard.level}
+                onPlayAgain={() => window.location.reload()}
+                onLeaveRoom={handleGoHome}
+              />
+
+              <WinnerPopup
+                isVisible={
                   gameWinner.hasWinner && gameWinner.winner?.name === playerName
-                )
-              }
+                }
+                winner={gameWinner.winner}
+                finalScores={gameWinner.finalScores}
+                playerName={playerName}
+                onPlayAgain={() => window.location.reload()}
+              />
+            </Box>
+
+            {/* Middle: Game Info */}
+            <GameInfo
               score={gameBoard.score}
               lines={gameBoard.lines}
               level={gameBoard.level}
-              onPlayAgain={() => window.location.reload()}
-              onLeaveRoom={handleGoHome}
+              nextPiece={gameBoard.nextPiece}
+              holdPiece={gameBoard.holdPiece}
+              canHold={gameBoard.canHold}
             />
 
-            {/* Game Winner Popup - chỉ che game board và chỉ hiện cho người thắng */}
-            <WinnerPopup
-              isVisible={
-                gameWinner.hasWinner && gameWinner.winner?.name === playerName
-              }
-              winner={gameWinner.winner}
-              finalScores={gameWinner.finalScores}
+            {/* Right Side: Toolbar */}
+            <RoomSidebar
+              roomCode={roomCode}
+              roomId={roomId}
+              players={players}
               playerName={playerName}
-              onPlayAgain={() => window.location.reload()}
+              gameBoard={gameBoard}
+              gameWinner={gameWinner}
+              onCopyRoomCode={handleCopyRoomCode}
+              onStartGame={startGame}
+              onPauseGame={pauseGame}
+              onGoHome={handleGoHome}
+              onSettingsOpen={handleSettingsOpen}
             />
-          </Box>
+          </Stack>
+        )}
 
-          {/* Multiplayer Game Over Notification */}
-          <MultiplayerGameOverNotification
-            multiplayerGameOver={multiplayerGameOver}
-          />
-
-          {/* Middle: Game Info */}
-          <GameInfo
-            score={gameBoard.score}
-            lines={gameBoard.lines}
-            level={gameBoard.level}
-            nextPiece={gameBoard.nextPiece}
-            holdPiece={gameBoard.holdPiece}
-            canHold={gameBoard.canHold}
-          />
-
-          {/* Right Side: Toolbar */}
-          <RoomSidebar
-            roomCode={roomCode}
-            roomId={roomId}
-            players={players}
-            playerName={playerName}
-            gameBoard={gameBoard}
-            gameWinner={gameWinner}
-            onCopyRoomCode={handleCopyRoomCode}
-            onStartGame={startGame}
-            onPauseGame={pauseGame}
-            onGoHome={handleGoHome}
-            onSettingsOpen={handleSettingsOpen}
-          />
-        </Stack>
+        {/* Multiplayer Game Over Notification */}
+        <MultiplayerGameOverNotification
+          multiplayerGameOver={multiplayerGameOver}
+        />
 
         {/* Settings Dialog */}
         <SettingsDialog open={settingsOpen} onClose={handleSettingsClose} />

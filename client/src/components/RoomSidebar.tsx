@@ -159,15 +159,6 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
             </Typography>
           )}
         </Box>
-
-        {gameService.isMultiplayer() && (
-          <Chip
-            label="🟢 Multiplayer Active"
-            color="success"
-            size="small"
-            sx={{ mt: 1, width: "100%" }}
-          />
-        )}
       </Paper>
 
       {/* Player Info & Start Game */}

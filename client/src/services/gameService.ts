@@ -14,7 +14,7 @@ import {
 
 class SimpleGameService {
   private roomCode: string | null = null;
-  private serverUrl = "http://localhost:5001";
+  private serverUrl = "http://192.168.1.148:5001";
   private socket: Socket | null = null;
 
   // Tự động tạo phòng khi game bắt đầu
