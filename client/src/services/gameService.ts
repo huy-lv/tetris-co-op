@@ -1,5 +1,6 @@
 import { getStoredPlayerName, storePlayerName } from "../utils/nameGenerator";
 import { io, Socket } from "socket.io-client";
+import { API_CONFIG } from "../config/api";
 import {
   RoomJoinedData,
   PlayerJoinedData,
@@ -14,7 +15,7 @@ import {
 
 class SimpleGameService {
   private roomCode: string | null = null;
-  private serverUrl = "http://192.168.1.148:5001";
+  private serverUrl = API_CONFIG.BASE_URL;
   private socket: Socket | null = null;
 
   // Tự động tạo phòng khi game bắt đầu

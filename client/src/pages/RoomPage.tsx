@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Container,
@@ -26,6 +26,7 @@ import GameOverPopup from "../components/GameOverPopup";
 import MultiplayerGameOverNotification from "../components/MultiplayerGameOverNotification";
 import PauseOverlay from "../components/PauseOverlay";
 import MobileSidebarPopup from "../components/MobileSidebarPopup";
+import VirtualControls from "../components/VirtualControls";
 import RoomSidebar from "../components/RoomSidebar";
 import gameService from "../services/gameService";
 import {
@@ -46,11 +47,81 @@ const RoomPage: React.FC = () => {
   const [players, setPlayers] = useState<string[]>([]);
   const [multiplayerGameOver, setMultiplayerGameOver] =
     useState<MultiplayerGameOverState>({ isGameOver: false });
-  const { gameBoard, gameWinner, playerName, startGame, pauseGame } =
-    useGameLogic(settingsOpen);
+  const {
+    gameBoard,
+    gameWinner,
+    playerName,
+    startGame,
+    pauseGame,
+    handleKeyPress,
+    handleKeyRelease,
+  } = useGameLogic(settingsOpen);
   const { roomId, isJoiningRoom, roomError } = useRoomNavigation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Virtual control handlers
+  const handleVirtualControl = useCallback(
+    (action: string) => {
+      const controls = getControlsFromStorage();
+      let key = "";
+
+      switch (action) {
+        case "moveLeft":
+          key = controls.MOVE_LEFT;
+          break;
+        case "moveRight":
+          key = controls.MOVE_RIGHT;
+          break;
+        case "softDrop":
+          key = controls.MOVE_DOWN;
+          break;
+        case "hardDrop":
+          key = controls.HARD_DROP;
+          break;
+        case "rotate":
+          key = controls.ROTATE;
+          break;
+        case "hold":
+          key = controls.HOLD;
+          break;
+      }
+
+      key && handleKeyPress(key);
+    },
+    [handleKeyPress]
+  );
+
+  const handleVirtualControlRelease = useCallback(
+    (action: string) => {
+      const controls = getControlsFromStorage();
+      let key = "";
+
+      switch (action) {
+        case "moveLeft":
+          key = controls.MOVE_LEFT;
+          break;
+        case "moveRight":
+          key = controls.MOVE_RIGHT;
+          break;
+        case "softDrop":
+          key = controls.MOVE_DOWN;
+          break;
+        case "hardDrop":
+          key = controls.HARD_DROP;
+          break;
+        case "rotate":
+          key = controls.ROTATE;
+          break;
+        case "hold":
+          key = controls.HOLD;
+          break;
+      }
+
+      key && handleKeyRelease(key);
+    },
+    [handleKeyRelease]
+  );
 
   // Debug useEffect để log state changes
   useEffect(() => {
@@ -300,6 +371,7 @@ const RoomPage: React.FC = () => {
               width: "100%",
               gap: 1,
               px: 1,
+              pb: 2, // Minimal padding since virtual controls float over
             }}
           >
             {/* Mobile Game Info - Top */}
@@ -380,13 +452,31 @@ const RoomPage: React.FC = () => {
               onClick={() => setMobileSidebarOpen(true)}
               sx={{
                 position: "fixed",
-                bottom: 16,
+                bottom: 220, // Position above floating virtual controls
                 right: 16,
                 zIndex: 1000,
               }}
             >
               <Menu />
             </Fab>
+
+            {/* Virtual Controls - Only on Mobile */}
+            <VirtualControls
+              onMoveLeft={() => handleVirtualControl("moveLeft")}
+              onMoveRight={() => handleVirtualControl("moveRight")}
+              onMoveDown={() => handleVirtualControl("softDrop")}
+              onRotate={() => handleVirtualControl("rotate")}
+              onHardDrop={() => handleVirtualControl("hardDrop")}
+              onHold={() => handleVirtualControl("hold")}
+              onMoveLeftRelease={() => handleVirtualControlRelease("moveLeft")}
+              onMoveRightRelease={() =>
+                handleVirtualControlRelease("moveRight")
+              }
+              onMoveDownRelease={() => handleVirtualControlRelease("softDrop")}
+              onRotateRelease={() => handleVirtualControlRelease("rotate")}
+              onHardDropRelease={() => handleVirtualControlRelease("hardDrop")}
+              onHoldRelease={() => handleVirtualControlRelease("hold")}
+            />
 
             {/* Mobile Sidebar Popup */}
             <MobileSidebarPopup
