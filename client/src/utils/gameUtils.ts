@@ -94,12 +94,9 @@ export const placeTetromino = (
   return newGrid;
 };
 
-export const clearLines = (
+export const findLinesToClear = (
   grid: (TetrominoType | null)[][]
-): {
-  newGrid: (TetrominoType | null)[][];
-  linesCleared: number;
-} => {
+): number[] => {
   const linesToClear: number[] = [];
 
   // Find complete lines
@@ -109,6 +106,17 @@ export const clearLines = (
       linesToClear.push(index);
     }
   });
+
+  return linesToClear;
+};
+
+export const clearLines = (
+  grid: (TetrominoType | null)[][]
+): {
+  newGrid: (TetrominoType | null)[][];
+  linesCleared: number;
+} => {
+  const linesToClear = findLinesToClear(grid);
 
   // Remove complete lines and add empty lines at top
   let newGrid = grid.filter((_, index) => !linesToClear.includes(index));

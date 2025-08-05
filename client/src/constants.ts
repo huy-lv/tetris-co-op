@@ -7,7 +7,7 @@ export const GAME_CONFIG = {
   LINES_PER_LEVEL: 10,
 } as const;
 
-export const TEST_MODE = false; // Set to true to always spawn O pieces for testing
+export const TEST_MODE = true; // Set to true to always spawn O pieces for testing
 
 export const CONTROLS = {
   MOVE_LEFT: "a",

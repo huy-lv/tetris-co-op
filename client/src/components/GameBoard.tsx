@@ -9,6 +9,8 @@ interface GameBoardProps {
   grid: (TetrominoType | null)[][];
   activePiece: Tetromino | null;
   ghostPiece: Tetromino | null;
+  clearingRows?: number[];
+  dropPosition?: { x: number; y: number };
 }
 
 const blockGlow = keyframes`
@@ -20,10 +22,55 @@ const blockGlow = keyframes`
   }
 `;
 
+const explosionAnimation = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    background: linear-gradient(45deg, #ff6b35, #f7931e);
+    box-shadow: 
+      0 0 10px rgba(255, 107, 53, 0.8),
+      inset 0 0 5px rgba(255, 255, 255, 0.3);
+  }
+  25% {
+    transform: scale(1.2);
+    opacity: 0.9;
+    background: linear-gradient(45deg, #ff4757, #ffa502);
+    box-shadow: 
+      0 0 20px rgba(255, 71, 87, 0.9),
+      inset 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.7;
+    background: linear-gradient(45deg, #ff3742, #ff6348);
+    box-shadow: 
+      0 0 30px rgba(255, 55, 66, 1),
+      inset 0 0 15px rgba(255, 255, 255, 0.7);
+  }
+  75% {
+    transform: scale(1.6);
+    opacity: 0.4;
+    background: linear-gradient(45deg, #ff2d92, #ff6b9d);
+    box-shadow: 
+      0 0 40px rgba(255, 45, 146, 0.8),
+      inset 0 0 20px rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+    background: linear-gradient(45deg, #c44569, #f8b500);
+    box-shadow: 
+      0 0 50px rgba(196, 69, 105, 0.3),
+      inset 0 0 25px rgba(255, 255, 255, 0.1);
+  }
+`;
+
 const GameBoardComponent: React.FC<GameBoardProps> = ({
   grid,
   activePiece,
   ghostPiece,
+  clearingRows = [],
+  dropPosition,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -88,6 +135,14 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
           const finalCell =
             cell || (isGhostPiece && !cell) ? cell || ghostPiece?.type : null;
           const isGhost = !cell && isGhostPiece;
+          const isClearing = clearingRows.includes(y);
+
+          // Calculate animation delay based on distance from drop position
+          let animationDelay = 0;
+          if (isClearing && dropPosition) {
+            const distance = Math.abs(x - dropPosition.x);
+            animationDelay = distance * 0.02; // 50ms per cell distance
+          }
 
           return (
             <Box
@@ -100,10 +155,13 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
                   : "transparent",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
                 position: "relative",
-                animation:
-                  finalCell && !isGhost
-                    ? `${blockGlow} 2s ease-in-out infinite`
-                    : "none",
+                animation: isClearing
+                  ? `${explosionAnimation} 0.2s ease-in-out forwards`
+                  : finalCell && !isGhost
+                  ? `${blockGlow} 2s ease-in-out infinite`
+                  : "none",
+                animationDelay: isClearing ? `${animationDelay}s` : "none",
+                zIndex: isClearing ? 10 : 1,
                 "&::before":
                   finalCell && !isGhost
                     ? {

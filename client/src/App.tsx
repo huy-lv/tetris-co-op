@@ -82,6 +82,8 @@ const App: React.FC = () => {
               grid={gameBoard.grid}
               activePiece={gameBoard.activePiece}
               ghostPiece={gameBoard.ghostPiece}
+              clearingRows={gameBoard.clearingRows}
+              dropPosition={gameBoard.dropPosition}
             />
 
             {gameBoard.isPaused && gameState === GAME_STATES.PLAYING && (

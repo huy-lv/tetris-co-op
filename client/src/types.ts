@@ -19,15 +19,17 @@ export interface Tetromino {
 export interface GameBoard {
   grid: (TetrominoType | null)[][];
   activePiece: Tetromino | null;
-  ghostPiece: Tetromino | null; // Ghost piece to show where the active piece will land
   nextPiece: TetrominoType | null;
-  holdPiece: TetrominoType | null; // Hold piece for the hold feature
-  canHold: boolean; // Flag to track if holding is allowed (once per piece)
+  ghostPiece: Tetromino | null;
+  holdPiece: TetrominoType | null;
+  canHold: boolean;
+  isPaused: boolean;
+  clearingRows: number[];
+  dropPosition?: { x: number; y: number };
   score: number;
   lines: number;
   level: number;
-  gameState: GameState;
-  isPaused: boolean; // Pause state for the game
+  gameState: string;
 }
 
 export interface Player {

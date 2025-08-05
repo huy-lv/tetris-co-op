@@ -9,6 +9,7 @@ import {
   isValidPosition,
   placeTetromino,
   clearLines,
+  findLinesToClear,
   calculateScore,
 } from "../utils/gameUtils";
 import { useBot } from "../bot";
@@ -26,6 +27,8 @@ const createInitialGameBoard = (): GameBoard => ({
   level: 0,
   gameState: GAME_STATES.WELCOME,
   isPaused: false, // Add pause state
+  clearingRows: [], // Add clearing rows for animation
+  dropPosition: undefined, // Add drop position for animation
 });
 
 export const useGameLogic = (settingsOpen: boolean = false) => {
@@ -124,36 +127,107 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         // If moving down failed, place the piece
         if (direction === "down") {
           const newGrid = placeTetromino(prev.grid, prev.activePiece);
-          const { newGrid: clearedGrid, linesCleared } = clearLines(newGrid);
-          const scoreIncrease = calculateScore(linesCleared, prev.level);
-          const newLines = prev.lines + linesCleared;
-          const newLevel = Math.floor(newLines / GAME_CONFIG.LINES_PER_LEVEL);
+          const linesToClear = findLinesToClear(newGrid);
 
-          // Check for game over
-          const newActivePiece = spawnNewPiece();
-          const gameOver = !isValidPosition(
-            clearedGrid,
-            newActivePiece,
-            newActivePiece.position
-          );
+          // If there are lines to clear, start animation
+          if (linesToClear.length > 0) {
+            // Spawn new piece immediately
+            const newActivePiece = spawnNewPiece();
+            const gameOver = !isValidPosition(
+              newGrid,
+              newActivePiece,
+              newActivePiece.position
+            );
 
-          return {
-            ...prev,
-            grid: clearedGrid,
-            activePiece: gameOver ? null : newActivePiece,
-            nextPiece: getRandomTetromino(),
-            score: prev.score + scoreIncrease,
-            lines: newLines,
-            level: newLevel,
-            canHold: true, // Reset the ability to hold when a new piece appears
-            gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
-          };
+            // After animation delay, actually clear the lines
+            setTimeout(() => {
+              setGameBoard((current) => {
+                const { newGrid: clearedGrid, linesCleared } = clearLines(
+                  current.grid
+                );
+                const scoreIncrease = calculateScore(
+                  linesCleared,
+                  current.level
+                );
+                const newLines = current.lines + linesCleared;
+                const newLevel = Math.floor(
+                  newLines / GAME_CONFIG.LINES_PER_LEVEL
+                );
+
+                return {
+                  ...current,
+                  grid: clearedGrid,
+                  score: current.score + scoreIncrease,
+                  lines: newLines,
+                  level: newLevel,
+                  clearingRows: [], // Clear the animation state
+                  dropPosition: undefined, // Clear drop position
+                };
+              });
+            }, 500); // 500ms animation delay
+
+            // Return immediately with animation state
+            return {
+              ...prev,
+              grid: newGrid,
+              activePiece: gameOver ? null : newActivePiece,
+              ghostPiece: gameOver
+                ? null
+                : updateGhostPiece(
+                    {
+                      ...prev,
+                      grid: newGrid,
+                      activePiece: newActivePiece,
+                    },
+                    newActivePiece
+                  ),
+              nextPiece: getRandomTetromino(),
+              canHold: true,
+              clearingRows: linesToClear,
+              dropPosition: prev.activePiece
+                ? {
+                    x:
+                      prev.activePiece.position.x +
+                      Math.floor(prev.activePiece.shape[0].length / 2),
+                    y: prev.activePiece.position.y,
+                  }
+                : undefined,
+              gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
+            };
+          } else {
+            // No lines to clear, proceed normally
+            const { newGrid: clearedGrid, linesCleared } = clearLines(newGrid);
+            const scoreIncrease = calculateScore(linesCleared, prev.level);
+            const newLines = prev.lines + linesCleared;
+            const newLevel = Math.floor(newLines / GAME_CONFIG.LINES_PER_LEVEL);
+
+            // Check for game over
+            const newActivePiece = spawnNewPiece();
+            const gameOver = !isValidPosition(
+              clearedGrid,
+              newActivePiece,
+              newActivePiece.position
+            );
+
+            return {
+              ...prev,
+              grid: clearedGrid,
+              activePiece: gameOver ? null : newActivePiece,
+              nextPiece: getRandomTetromino(),
+              score: prev.score + scoreIncrease,
+              lines: newLines,
+              level: newLevel,
+              canHold: true, // Reset the ability to hold when a new piece appears
+              gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
+              clearingRows: [], // No rows being cleared
+            };
+          }
         }
 
         return prev;
       });
     },
-    [spawnNewPiece]
+    [spawnNewPiece, updateGhostPiece]
   );
 
   const rotateActivePiece = useCallback(() => {
@@ -259,43 +333,110 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       };
 
       const newGrid = placeTetromino(prev.grid, droppedPiece);
-      const { newGrid: clearedGrid, linesCleared } = clearLines(newGrid);
-      const scoreIncrease =
-        calculateScore(linesCleared, prev.level) + dropDistance * 2;
-      const newLines = prev.lines + linesCleared;
-      const newLevel = Math.floor(newLines / GAME_CONFIG.LINES_PER_LEVEL);
+      const linesToClear = findLinesToClear(newGrid);
 
-      // Check for game over
-      const newActivePiece = spawnNewPiece();
-      const gameOver = !isValidPosition(
-        clearedGrid,
-        newActivePiece,
-        newActivePiece.position
-      );
+      // If there are lines to clear, start animation
+      if (linesToClear.length > 0) {
+        // Spawn new piece immediately
+        const newActivePiece = spawnNewPiece();
+        const gameOver = !isValidPosition(
+          newGrid,
+          newActivePiece,
+          newActivePiece.position
+        );
 
-      return {
-        ...prev,
-        grid: clearedGrid,
-        activePiece: gameOver ? null : newActivePiece,
-        ghostPiece: gameOver
-          ? null
-          : updateGhostPiece(
-              {
-                ...prev,
-                grid: clearedGrid,
-                activePiece: newActivePiece,
-              },
-              newActivePiece
-            ),
-        nextPiece: getRandomTetromino(),
-        score: prev.score + scoreIncrease,
-        lines: newLines,
-        level: newLevel,
-        canHold: true, // Reset hold flag when a piece is placed
-        gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
-      };
+        // After animation delay, actually clear the lines
+        setTimeout(() => {
+          setGameBoard((current) => {
+            const { newGrid: clearedGrid, linesCleared } = clearLines(
+              current.grid
+            );
+            const scoreIncrease =
+              calculateScore(linesCleared, current.level) + dropDistance * 2;
+            const newLines = current.lines + linesCleared;
+            const newLevel = Math.floor(newLines / GAME_CONFIG.LINES_PER_LEVEL);
+
+            return {
+              ...current,
+              grid: clearedGrid,
+              score: current.score + scoreIncrease,
+              lines: newLines,
+              level: newLevel,
+              clearingRows: [], // Clear the animation state
+              dropPosition: undefined, // Clear drop position
+            };
+          });
+        }, 500); // 500ms animation delay
+
+        // Return immediately with animation state
+        return {
+          ...prev,
+          grid: newGrid,
+          activePiece: gameOver ? null : newActivePiece,
+          ghostPiece: gameOver
+            ? null
+            : updateGhostPiece(
+                {
+                  ...prev,
+                  grid: newGrid,
+                  activePiece: newActivePiece,
+                },
+                newActivePiece
+              ),
+          nextPiece: getRandomTetromino(),
+          canHold: true,
+          clearingRows: linesToClear,
+          dropPosition: droppedPiece
+            ? {
+                x:
+                  droppedPiece.position.x +
+                  Math.floor(droppedPiece.shape[0].length / 2),
+                y: droppedPiece.position.y,
+              }
+            : undefined,
+          gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
+        };
+      } else {
+        // No lines to clear, proceed normally
+        const { newGrid: clearedGrid, linesCleared } = clearLines(newGrid);
+        const scoreIncrease =
+          calculateScore(linesCleared, prev.level) + dropDistance * 2;
+        const newLines = prev.lines + linesCleared;
+        const newLevel = Math.floor(newLines / GAME_CONFIG.LINES_PER_LEVEL);
+
+        // Check for game over
+        const newActivePiece = spawnNewPiece();
+        const gameOver = !isValidPosition(
+          clearedGrid,
+          newActivePiece,
+          newActivePiece.position
+        );
+
+        return {
+          ...prev,
+          grid: clearedGrid,
+          activePiece: gameOver ? null : newActivePiece,
+          ghostPiece: gameOver
+            ? null
+            : updateGhostPiece(
+                {
+                  ...prev,
+                  grid: clearedGrid,
+                  activePiece: newActivePiece,
+                },
+                newActivePiece
+              ),
+          nextPiece: getRandomTetromino(),
+          score: prev.score + scoreIncrease,
+          lines: newLines,
+          level: newLevel,
+          canHold: true, // Reset hold flag when a piece is placed
+          gameState: gameOver ? GAME_STATES.GAME_OVER : prev.gameState,
+          clearingRows: [], // No rows being cleared
+        };
+      }
     });
-  }, [spawnNewPiece]);
+  }, [spawnNewPiece, updateGhostPiece]);
 
   const holdActivePiece = useCallback(() => {
     setGameBoard((prev: GameBoard) => {
