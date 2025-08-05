@@ -1,5 +1,10 @@
 import { TetrominoType, Position, Tetromino } from "../types";
-import { TETROMINO_SHAPES, TETROMINO_COLORS, GAME_CONFIG } from "../constants";
+import {
+  TETROMINO_SHAPES,
+  TETROMINO_COLORS,
+  GAME_CONFIG,
+  TEST_MODE,
+} from "../constants";
 
 export const createEmptyGrid = (): (TetrominoType | null)[][] => {
   return Array(GAME_CONFIG.BOARD_HEIGHT)
@@ -8,6 +13,7 @@ export const createEmptyGrid = (): (TetrominoType | null)[][] => {
 };
 
 export const getRandomTetromino = (): TetrominoType => {
+  if (TEST_MODE) return "O";
   const types = Object.keys(TETROMINO_SHAPES) as TetrominoType[];
   return types[Math.floor(Math.random() * types.length)];
 };
