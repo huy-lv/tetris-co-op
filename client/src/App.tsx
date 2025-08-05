@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -17,6 +17,7 @@ import {
 } from "@mui/icons-material";
 import { GAME_STATES } from "./constants";
 import { useGameLogic } from "./hooks/useGameLogic";
+import { getControlsFromStorage } from "./utils/controlsUtils";
 import WelcomeScreen from "./components/WelcomeScreen";
 import GameBoard from "./components/GameBoard";
 import GameInfo from "./components/GameInfo";
@@ -30,10 +31,20 @@ const pulseAnimation = keyframes`
 
 const App: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [currentControls, setCurrentControls] = useState(
+    getControlsFromStorage()
+  );
   const { gameBoard, playerName, startGame, createRoom, pauseGame, bot } =
     useGameLogic(settingsOpen);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Update controls when settings dialog closes
+  useEffect(() => {
+    if (!settingsOpen) {
+      setCurrentControls(getControlsFromStorage());
+    }
+  }, [settingsOpen]);
 
   const handleSettingsOpen = () => {
     // Pause game when opening settings if game is playing
@@ -337,34 +348,37 @@ const App: React.FC = () => {
                 🎮 Game Controls
               </Typography>
 
-              <Stack spacing={1}>
+              <Stack
+                spacing={1}
+                sx={{
+                  p: 2,
+                  background: "rgba(0, 170, 255, 0.05)",
+                  border: "1px solid rgba(0, 170, 255, 0.2)",
+                  borderRadius: 2,
+                  textAlign: "center",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    background: "rgba(0, 170, 255, 0.1)",
+                    transform: "translateY(-1px)",
+                  },
+                }}
+              >
                 {[
-                  { keys: "W A S D", action: "Move pieces" },
-                  { keys: "N", action: "Rotate" },
-                  { keys: "J", action: "Hard Drop" },
-                  { keys: "B", action: "Hold Piece" },
+                  {
+                    keys: `${currentControls.MOVE_UP} ${currentControls.MOVE_LEFT} ${currentControls.MOVE_DOWN} ${currentControls.MOVE_RIGHT}`,
+                    action: "Move pieces",
+                  },
+                  { keys: currentControls.ROTATE, action: "Rotate" },
+                  { keys: currentControls.HARD_DROP, action: "Hard Drop" },
+                  { keys: currentControls.HOLD, action: "Hold Piece" },
                 ].map((control, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      p: 2,
-                      background: "rgba(0, 170, 255, 0.05)",
-                      border: "1px solid rgba(0, 170, 255, 0.2)",
-                      borderRadius: 2,
-                      textAlign: "center",
-                      transition: "all 0.3s ease",
-                      "&:hover": {
-                        background: "rgba(0, 170, 255, 0.1)",
-                        transform: "translateY(-1px)",
-                      },
-                    }}
-                  >
+                  <Box key={index}>
                     <Typography
                       variant="body2"
                       color="text.primary"
                       fontWeight={500}
                     >
-                      {control.keys} - {control.action}
+                      {control.keys.toUpperCase()} - {control.action}
                     </Typography>
                   </Box>
                 ))}

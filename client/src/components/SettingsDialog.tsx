@@ -257,7 +257,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
             sx={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-              gap: 3,
+              gap: 1,
             }}
           >
             {Object.entries(controlLabels).map(([key, label]) => (
@@ -267,6 +267,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
                   display: "flex",
                   alignItems: "center",
                   p: 2,
+                  py: 1,
                   borderRadius: 2,
                   border: "1px solid rgba(0, 170, 255, 0.2)",
                   bgcolor: "rgba(0, 0, 0, 0.2)",

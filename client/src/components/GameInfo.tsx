@@ -90,33 +90,22 @@ const GameInfo: React.FC<GameInfoProps> = ({
           }}
         >
           <CardContent sx={{ p: 3 }}>
-            <Typography
-              variant="h5"
-              component="h3"
-              textAlign="center"
-              color="primary.light"
-              gutterBottom
-              sx={{ mb: 3 }}
+            <Stack
+              spacing={2}
+              sx={{
+                p: 2,
+                background: "rgba(0, 0, 0, 0.3)",
+                borderRadius: 2,
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  background: "rgba(255, 255, 255, 0.05)",
+                  transform: "translateY(-2px)",
+                },
+              }}
             >
-              📊 Game Stats
-            </Typography>
-
-            <Stack spacing={2}>
               {stats.map((stat) => (
-                <Box
-                  key={stat.label}
-                  sx={{
-                    p: 2,
-                    background: "rgba(0, 0, 0, 0.3)",
-                    borderRadius: 2,
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      background: "rgba(255, 255, 255, 0.05)",
-                      transform: "translateY(-2px)",
-                    },
-                  }}
-                >
+                <Box key={stat.label}>
                   <Box
                     display="flex"
                     alignItems="center"
