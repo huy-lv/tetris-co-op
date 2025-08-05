@@ -173,9 +173,9 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
     setControls({ ...CONTROLS });
   };
 
-    const CONTROL_LABELS: Record<keyof typeof CONTROLS, string> = {
+  const CONTROL_LABELS: Record<keyof typeof CONTROLS, string> = {
     MOVE_LEFT: "Move Left",
-    MOVE_RIGHT: "Move Right", 
+    MOVE_RIGHT: "Move Right",
     MOVE_DOWN: "Move Down",
     MOVE_UP: "Move Up",
     ROTATE: "Rotate Piece",

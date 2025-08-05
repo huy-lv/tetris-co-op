@@ -14,6 +14,7 @@ import {
 } from "../utils/gameUtils";
 import { useBot } from "../bot";
 import { getControlsFromStorage } from "../utils/controlsUtils";
+import gameService from "../services/gameService";
 
 const createInitialGameBoard = (): GameBoard => ({
   grid: createEmptyGrid(),
@@ -36,12 +37,177 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   const [gameBoard, setGameBoard] = useState<GameBoard>(createInitialGameBoard);
   const [playerName, setPlayerName] = useState<string>(() => {
     // Load player name from localStorage on initialization
-    return localStorage.getItem("tetris-player-name") || "";
+    return localStorage.getItem("tetris_player_name") || "";
+  });
+  const [gameWinner, setGameWinner] = useState<{
+    hasWinner: boolean;
+    winner: any;
+    finalScores: any[];
+    totalPlayers: number;
+  }>({
+    hasWinner: false,
+    winner: null,
+    finalScores: [],
+    totalPlayers: 0,
   });
   const gameLoopRef = useRef<number | null>(null);
   const lastDropTimeRef = useRef<number>(0);
   const keysPressed = useRef<Set<string>>(new Set());
   const lastMoveTimeRef = useRef<{ [key: string]: number }>({});
+
+  // Listen for successful room join to transition from WELCOME to WAITING
+  useEffect(() => {
+    // Setup event listener for successful room join
+    const handleRoomJoined = (_data: any) => {
+      console.log(
+        "🎮 Room joined successfully, transitioning to WAITING state"
+      );
+      setGameBoard((prev: GameBoard) => ({
+        ...prev,
+        gameState: GAME_STATES.WAITING,
+      }));
+    };
+
+    // Setup event listener for game started by other player
+    const handleGameStarted = (data: any) => {
+      console.log("🎮 Game started by other player:", data);
+      setGameBoard((prev: GameBoard) => {
+        if (prev.gameState === GAME_STATES.WAITING) {
+          // Tạo new piece đơn giản mà không dùng spawnNewPiece callback
+          const type = prev.nextPiece || getRandomTetromino();
+          const newActivePiece = createTetromino(type, {
+            x: Math.floor(GAME_CONFIG.BOARD_WIDTH / 2) - 1,
+            y: -1,
+          });
+
+          return {
+            ...prev,
+            activePiece: newActivePiece,
+            ghostPiece: null, // Sẽ được update trong useEffect khác
+            gameState: GAME_STATES.PLAYING,
+          };
+        }
+        return prev;
+      });
+      lastDropTimeRef.current = Date.now();
+    };
+
+    // Setup event listener for when someone wins
+    const handleGameWinner = (data: any) => {
+      console.log("🎮 Game winner detected, stopping game:", data);
+      
+      // Set gameWinner state cho tất cả người chơi
+      setGameWinner({
+        hasWinner: true,
+        winner: data.winner,
+        finalScores: data.finalScores,
+        totalPlayers: data.totalPlayers,
+      });
+
+      // Chỉ set GAME_OVER cho người thua, người thắng giữ nguyên gameState
+      setGameBoard((prev: GameBoard) => {
+        // Nếu mình là người thắng, không thay đổi gameState
+        if (data.winner?.name === playerName) {
+          console.log("🏆 I am the winner! Keeping current game state");
+          return {
+            ...prev,
+            activePiece: null, // Remove active piece
+            ghostPiece: null,
+            // Không thay đổi gameState - người thắng vẫn đang PLAYING
+          };
+        } else {
+          console.log("😵 I am not the winner, setting GAME_OVER");
+          return {
+            ...prev,
+            gameState: GAME_STATES.GAME_OVER,
+            activePiece: null, // Remove active piece
+            ghostPiece: null,
+          };
+        }
+      });
+    };
+
+    // Setup event listener for when game ends
+    const handleGameEnded = (data: any) => {
+      console.log("🎮 Game ended, stopping game:", data);
+      
+      // Set gameWinner state cho tất cả người chơi
+      setGameWinner({
+        hasWinner: true,
+        winner: data.winner,
+        finalScores: data.finalScores,
+        totalPlayers: data.totalPlayers,
+      });
+
+      // Khi game ended, tất cả đều set GAME_OVER
+      setGameBoard((prev: GameBoard) => ({
+        ...prev,
+        gameState: GAME_STATES.GAME_OVER,
+        activePiece: null, // Remove active piece
+        ghostPiece: null,
+      }));
+    };
+
+    // Assign the event handlers
+    gameService.onRoomJoined = handleRoomJoined;
+    gameService.onGameStarted = handleGameStarted;
+    gameService.onGameWinner = handleGameWinner;
+    gameService.onGameEnded = handleGameEnded;
+
+    // Also check if we already have a room code (direct URL access case)
+    const roomCode = gameService.getRoomCode();
+    if (roomCode && gameBoard.gameState === GAME_STATES.WELCOME) {
+      // If we have a room code but haven't transitioned yet, do it now
+      setTimeout(() => {
+        setGameBoard((prev: GameBoard) => {
+          if (prev.gameState === GAME_STATES.WELCOME) {
+            console.log(
+              "🎮 Direct room access, transitioning to WAITING state"
+            );
+            return {
+              ...prev,
+              gameState: GAME_STATES.WAITING,
+            };
+          }
+          return prev;
+        });
+      }, 1000); // Give some time for room join to complete
+    }
+
+    // Cleanup
+    return () => {
+      if (gameService.onRoomJoined === handleRoomJoined) {
+        gameService.onRoomJoined = undefined;
+      }
+      if (gameService.onGameStarted === handleGameStarted) {
+        gameService.onGameStarted = undefined;
+      }
+      if (gameService.onGameWinner === handleGameWinner) {
+        gameService.onGameWinner = undefined;
+      }
+      if (gameService.onGameEnded === handleGameEnded) {
+        gameService.onGameEnded = undefined;
+      }
+    };
+  }, [gameBoard.gameState, playerName]); // Thêm playerName vào dependency
+
+  // Send game state to server when game over
+  useEffect(() => {
+    if (
+      gameBoard.gameState === GAME_STATES.GAME_OVER &&
+      gameService.isMultiplayer()
+    ) {
+      const gameState = {
+        score: gameBoard.score,
+        lines: gameBoard.lines,
+        level: gameBoard.level,
+        isGameOver: true,
+      };
+
+      console.log("🎮 Sending game over state to server:", gameState);
+      gameService.updateGameState(gameState);
+    }
+  }, [gameBoard.gameState, gameBoard.score, gameBoard.lines, gameBoard.level]);
 
   // Bot functionality
   const bot = useBot(
@@ -522,6 +688,9 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   }, [updateGhostPiece]);
 
   const startGame = useCallback(() => {
+    // Bắn socket event để tất cả players cùng bắt đầu
+    gameService.startGame();
+
     setGameBoard((prev: GameBoard) => {
       // If game over, reset the board completely
       if (prev.gameState === GAME_STATES.GAME_OVER) {
@@ -562,7 +731,10 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   const pauseGame = useCallback(() => {
     setGameBoard((prev: GameBoard) => ({
       ...prev,
-      isPaused: !prev.isPaused,
+      gameState:
+        prev.gameState === GAME_STATES.PLAYING
+          ? GAME_STATES.PAUSED
+          : GAME_STATES.PLAYING,
     }));
   }, []);
 
@@ -570,10 +742,31 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     setGameBoard(createInitialGameBoard());
   }, []);
 
-  const createRoom = useCallback((name: string) => {
+  const createRoom = useCallback(async (name: string) => {
     // Save player name to localStorage
-    localStorage.setItem("tetris-player-name", name);
+    localStorage.setItem("tetris_player_name", name);
     setPlayerName(name);
+
+    try {
+      // Tự động tạo phòng trên server
+      const roomCode = await gameService.createRoom(name);
+      console.log(`🏠 Room created: ${roomCode}`);
+
+      // Setup multiplayer event handlers
+      gameService.onPlayerJoined = (data) => {
+        console.log(`👤 Player joined: ${data.newPlayer}`);
+        // Có thể thêm notification ở đây
+      };
+
+      gameService.onGameStateUpdate = (data) => {
+        console.log(`📊 Other player state updated:`, data);
+        // Có thể sync game state ở đây
+      };
+    } catch (error) {
+      console.error("Failed to create room:", error);
+      // Fallback to offline mode
+    }
+
     setGameBoard((prev: GameBoard) => ({
       ...prev,
       gameState: GAME_STATES.WAITING,
@@ -600,11 +793,14 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         currentControls.HOLD,
       ];
 
-      if (gameBoard.isPaused && movementKeys.includes(lowerKey as any)) {
+      if (
+        gameBoard.gameState === GAME_STATES.PAUSED &&
+        movementKeys.includes(lowerKey as any)
+      ) {
         // Resume game first
         setGameBoard((prev: GameBoard) => ({
           ...prev,
-          isPaused: false,
+          gameState: GAME_STATES.PLAYING,
         }));
       }
 
@@ -654,7 +850,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       rotateActivePiece,
       hardDrop,
       holdActivePiece,
-      gameBoard.isPaused,
+      gameBoard.gameState,
       settingsOpen,
     ]
   );
@@ -679,7 +875,6 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       // Handle automatic piece dropping
       if (
         gameBoard.gameState === GAME_STATES.PLAYING &&
-        !gameBoard.isPaused &&
         gameBoard.activePiece &&
         now - lastDropTimeRef.current > actualDropSpeed
       ) {
@@ -689,11 +884,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
 
       // Handle continuous movement for held keys with acceleration
       keysPressed.current.forEach((key) => {
-        if (
-          gameBoard.gameState === GAME_STATES.PLAYING &&
-          !gameBoard.isPaused &&
-          !settingsOpen
-        ) {
+        if (gameBoard.gameState === GAME_STATES.PLAYING && !settingsOpen) {
           const lastMoveTime = lastMoveTimeRef.current[key] || 0;
           const holdDuration = now - lastMoveTime;
           const currentControls = getControlsFromStorage();
@@ -729,7 +920,6 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       if (
         bot.isEnabled &&
         gameBoard.gameState === GAME_STATES.PLAYING &&
-        !gameBoard.isPaused &&
         gameBoard.activePiece
       ) {
         bot.executeMove(gameBoard, gameBoard.activePiece);
@@ -749,7 +939,6 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     gameBoard.gameState,
     gameBoard.level,
     gameBoard.activePiece,
-    gameBoard.isPaused,
     settingsOpen,
     moveActivePiece,
     bot,
@@ -806,8 +995,30 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     };
   }, [handleKeyPress, handleKeyRelease, gameBoard.gameState]);
 
+  // Sync game state với server khi có thay đổi
+  useEffect(() => {
+    if (
+      gameBoard.gameState === GAME_STATES.PLAYING ||
+      gameBoard.gameState === GAME_STATES.GAME_OVER
+    ) {
+      const gameState = {
+        grid: gameBoard.grid,
+        score: gameBoard.score,
+        lines: gameBoard.lines,
+        level: gameBoard.level,
+        isGameOver: gameBoard.gameState === GAME_STATES.GAME_OVER,
+      };
+
+      // Chỉ sync khi có multiplayer connection
+      if (gameService.isMultiplayer()) {
+        gameService.updateGameState(gameState);
+      }
+    }
+  }, [gameBoard.score, gameBoard.lines, gameBoard.level, gameBoard.gameState]);
+
   return {
     gameBoard,
+    gameWinner,
     playerName,
     startGame,
     pauseGame,
