@@ -29,6 +29,7 @@ const createInitialGameBoard = (): GameBoard => ({
   isPaused: false, // Add pause state
   clearingRows: [], // Add clearing rows for animation
   dropPosition: undefined, // Add drop position for animation
+  isShaking: false, // Initialize shake state
 });
 
 export const useGameLogic = (settingsOpen: boolean = false) => {
@@ -129,8 +130,23 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
           const newGrid = placeTetromino(prev.grid, prev.activePiece);
           const linesToClear = findLinesToClear(newGrid);
 
-          // If there are lines to clear, start animation
+          // If there are lines to clear, start animation and shake
           if (linesToClear.length > 0) {
+            // Trigger shake animation
+            setTimeout(() => {
+              setGameBoard((current) => ({
+                ...current,
+                isShaking: true,
+              }));
+              
+              // Reset shake animation after 300ms
+              setTimeout(() => {
+                setGameBoard((current) => ({
+                  ...current,
+                  isShaking: false,
+                }));
+              }, 300);
+            }, 0);
             // Spawn new piece immediately
             const newActivePiece = spawnNewPiece();
             const gameOver = !isValidPosition(
@@ -335,8 +351,23 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       const newGrid = placeTetromino(prev.grid, droppedPiece);
       const linesToClear = findLinesToClear(newGrid);
 
-      // If there are lines to clear, start animation
+      // If there are lines to clear, start animation and shake
       if (linesToClear.length > 0) {
+        // Trigger shake animation
+        setTimeout(() => {
+          setGameBoard((current) => ({
+            ...current,
+            isShaking: true,
+          }));
+          
+          // Reset shake animation after 300ms
+          setTimeout(() => {
+            setGameBoard((current) => ({
+              ...current,
+              isShaking: false,
+            }));
+          }, 300);
+        }, 0);
         // Spawn new piece immediately
         const newActivePiece = spawnNewPiece();
         const gameOver = !isValidPosition(

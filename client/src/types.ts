@@ -26,6 +26,7 @@ export interface GameBoard {
   isPaused: boolean;
   clearingRows: number[];
   dropPosition?: { x: number; y: number };
+  isShaking?: boolean;
   score: number;
   lines: number;
   level: number;

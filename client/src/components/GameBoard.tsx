@@ -11,6 +11,7 @@ interface GameBoardProps {
   ghostPiece: Tetromino | null;
   clearingRows?: number[];
   dropPosition?: { x: number; y: number };
+  isShaking?: boolean;
 }
 
 const blockGlow = keyframes`
@@ -65,12 +66,26 @@ const explosionAnimation = keyframes`
   }
 `;
 
+const shakeAnimation = keyframes`
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-1px); }
+  20% { transform: translateX(1px); }
+  30% { transform: translateX(-1px); }
+  40% { transform: translateX(1px); }
+  50% { transform: translateX(-0.5px); }
+  60% { transform: translateX(0.5px); }
+  70% { transform: translateX(-0.5px); }
+  80% { transform: translateX(0.5px); }
+  90% { transform: translateX(-0.5px); }
+`;
+
 const GameBoardComponent: React.FC<GameBoardProps> = ({
   grid,
   activePiece,
   ghostPiece,
   clearingRows = [],
   dropPosition,
+  isShaking = false,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -216,6 +231,9 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
           inset 0 0 30px rgba(0, 0, 0, 0.5)
         `,
         position: "relative",
+        animation: isShaking
+          ? `${shakeAnimation} 0.3s ease-in-out`
+          : `${blockGlow} 4s ease-in-out infinite`,
         "&::before": {
           content: '""',
           position: "absolute",
@@ -226,7 +244,6 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
           background: "linear-gradient(45deg, #0066cc, #00aaff, #0066cc)",
           borderRadius: 3,
           zIndex: -1,
-          animation: `${blockGlow} 4s ease-in-out infinite`,
         },
       }}
     >

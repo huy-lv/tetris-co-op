@@ -84,6 +84,7 @@ const App: React.FC = () => {
               ghostPiece={gameBoard.ghostPiece}
               clearingRows={gameBoard.clearingRows}
               dropPosition={gameBoard.dropPosition}
+              isShaking={gameBoard.isShaking}
             />
 
             {gameBoard.isPaused && gameState === GAME_STATES.PLAYING && (
