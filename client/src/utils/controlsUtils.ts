@@ -5,7 +5,7 @@ export const getControlsFromStorage = () => {
   if (savedControls) {
     try {
       const parsedControls = JSON.parse(savedControls);
-      // Merge với CONTROLS mặc định để đảm bảo tất cả keys đều có
+      // Merge with default CONTROLS to ensure all keys exist
       return { ...CONTROLS, ...parsedControls };
     } catch (error) {
       console.error("Failed to parse saved controls:", error);

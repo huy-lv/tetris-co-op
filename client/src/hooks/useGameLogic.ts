@@ -138,7 +138,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
                 ...current,
                 isShaking: true,
               }));
-              
+
               // Reset shake animation after 300ms
               setTimeout(() => {
                 setGameBoard((current) => ({
@@ -359,7 +359,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
             ...current,
             isShaking: true,
           }));
-          
+
           // Reset shake animation after 300ms
           setTimeout(() => {
             setGameBoard((current) => ({

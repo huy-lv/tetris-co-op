@@ -198,16 +198,14 @@ const App: React.FC = () => {
           </Box>
 
           {/* Center: Game Stats & Next Piece */}
-          {gameState === GAME_STATES.PLAYING && (
-            <GameInfo
-              score={gameBoard.score}
-              lines={gameBoard.lines}
-              level={gameBoard.level}
-              nextPiece={gameBoard.nextPiece}
-              holdPiece={gameBoard.holdPiece}
-              canHold={gameBoard.canHold}
-            />
-          )}
+          <GameInfo
+            score={gameBoard.score}
+            lines={gameBoard.lines}
+            level={gameBoard.level}
+            nextPiece={gameBoard.nextPiece}
+            holdPiece={gameBoard.holdPiece}
+            canHold={gameBoard.canHold}
+          />
 
           {/* Right Side: Toolbar */}
           <Stack spacing={3} sx={{ minWidth: { xs: "100%", md: 320 } }}>
@@ -280,7 +278,7 @@ const App: React.FC = () => {
                 color="warning.light"
                 gutterBottom
               >
-                ⚙️ Cài đặt
+                ⚙️ Settings
               </Typography>
 
               <Button
@@ -302,7 +300,7 @@ const App: React.FC = () => {
                   transition: "all 0.3s ease-in-out",
                 }}
               >
-                Mở cài đặt
+                Open Settings
               </Button>
               <Button
                 variant="contained"
@@ -328,7 +326,7 @@ const App: React.FC = () => {
                   },
                 }}
               >
-                {gameBoard.isPaused ? "Tiếp tục game" : "Tạm dừng game"}
+                {gameBoard.isPaused ? "Resume Game" : "Pause Game"}
               </Button>
             </Paper>
 

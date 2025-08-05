@@ -39,7 +39,7 @@ const KeyCapture: React.FC<KeyCaptureProps> = ({
       e.stopPropagation();
 
       const key = e.key.toLowerCase();
-      // Không cho phép các phím đặc biệt
+      // Don't allow special keys
       if (key.length === 1 && key.match(/[a-z0-9]/)) {
         onKeyChange(key);
       }
@@ -125,7 +125,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
   }>({ ...CONTROLS });
   const [capturingKey, setCapturingKey] = useState<string | null>(null);
 
-  // Tải các cài đặt từ localStorage khi component được mount
+  // Load settings from localStorage when component mounts
   useEffect(() => {
     const savedControls = localStorage.getItem("tetris-controls");
     if (savedControls) {
@@ -143,7 +143,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
     _event: object,
     reason?: "backdropClick" | "escapeKeyDown"
   ) => {
-    // Chỉ đóng khi nhấn ESC, không đóng khi click backdrop
+    // Only close when ESC is pressed, don't close when clicking backdrop
     if (reason === "backdropClick") {
       return;
     }
@@ -173,14 +173,14 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
     setControls({ ...CONTROLS });
   };
 
-  const controlLabels: { [key: string]: string } = {
-    MOVE_LEFT: "Di chuyển trái",
-    MOVE_RIGHT: "Di chuyển phải",
-    MOVE_DOWN: "Di chuyển xuống",
-    MOVE_UP: "Di chuyển lên",
-    ROTATE: "Xoay mảnh",
-    HARD_DROP: "Thả nhanh",
-    HOLD: "Giữ mảnh",
+    const CONTROL_LABELS: Record<keyof typeof CONTROLS, string> = {
+    MOVE_LEFT: "Move Left",
+    MOVE_RIGHT: "Move Right", 
+    MOVE_DOWN: "Move Down",
+    MOVE_UP: "Move Up",
+    ROTATE: "Rotate Piece",
+    HARD_DROP: "Hard Drop",
+    HOLD: "Hold Piece",
   };
 
   return (
@@ -211,7 +211,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
       >
         <Box sx={{ display: "flex", alignItems: "center" }}>
           <SettingsRounded sx={{ mr: 1 }} />
-          Cài đặt
+          Settings
         </Box>
         <Button
           onClick={onClose}
@@ -242,15 +242,15 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
             },
           }}
         >
-          <Tab icon={<KeyboardRounded />} label="Điều khiển" />
-          <Tab icon={<TuneRounded />} label="Chung" />
+          <Tab icon={<KeyboardRounded />} label="Controls" />
+          <Tab icon={<TuneRounded />} label="General" />
         </Tabs>
       </Box>
 
       <DialogContent sx={{ p: 0 }}>
         <TabPanel value={tabValue} index={0}>
           <Typography variant="h6" color="primary.light" gutterBottom>
-            Tùy chỉnh phím điều khiển
+            Customize Control Keys
           </Typography>
 
           <Box
@@ -260,7 +260,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
               gap: 1,
             }}
           >
-            {Object.entries(controlLabels).map(([key, label]) => (
+            {Object.entries(CONTROL_LABELS).map(([key, label]) => (
               <Box
                 key={key}
                 sx={{
@@ -291,17 +291,17 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
 
           <Box sx={{ mt: 3 }}>
             <Typography variant="body2" color="text.secondary">
-              Các thay đổi sẽ được lưu và áp dụng ngay lập tức.
+              Changes will be saved and applied immediately.
             </Typography>
           </Box>
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
           <Typography variant="h6" color="primary.light" gutterBottom>
-            Cài đặt chung
+            General Settings
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Các cài đặt chung sẽ được thêm vào trong các phiên bản tiếp theo.
+            General settings will be added in future versions.
           </Typography>
         </TabPanel>
       </DialogContent>
@@ -313,7 +313,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
           variant="outlined"
           sx={{ mr: 1 }}
         >
-          Đặt lại mặc định
+          Reset to Default
         </Button>
         <Button
           onClick={handleSave}
@@ -323,7 +323,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
             JSON.stringify(controls) === JSON.stringify(originalControls)
           }
         >
-          Lưu thay đổi
+          Save Changes
         </Button>
       </DialogActions>
     </Dialog>
