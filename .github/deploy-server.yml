@@ -1,0 +1,185 @@
+name: Deploy Tetris Server to Ubuntu
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE_NAME: tetris-server
+  CONTAINER_NAME: tetris-server
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ env.DOCKER_IMAGE_NAME }}:latest .
+        
+    - name: Test Docker image
+      run: |
+        # Start container in background
+        docker run -d --name test-server -p 3001:3001 -e NODE_ENV=production ${{ env.DOCKER_IMAGE_NAME }}:latest
+        
+        # Wait for container to be ready
+        sleep 15
+        
+        # Test health endpoint (this should work)
+        echo "Testing health endpoint..."
+        curl -f http://localhost:3001/health
+        
+        # Test Socket.IO info endpoint (GET request should work)
+        echo "Testing Socket.IO info endpoint..."
+        curl -f http://localhost:3001/socket.io/?EIO=4\&transport=polling
+        
+        # Show container logs for debugging
+        echo "Container logs:"
+        docker logs test-server
+        
+        # Cleanup
+        docker stop test-server
+        docker rm test-server
+        
+    - name: Save Docker image
+      run: |
+        docker save ${{ env.DOCKER_IMAGE_NAME }}:latest | gzip > tetris-server.tar.gz
+        
+    - name: Prepare deployment files
+      run: |
+        # Create deployment package
+        mkdir -p deployment
+        cp tetris-server.tar.gz deployment/
+        
+        # Create simple deployment script  
+        echo "� Creating deployment script..."
+        echo '#!/bin/bash' > deployment/deploy-server.sh
+        echo 'set -e' >> deployment/deploy-server.sh
+        echo 'echo "🚀 Deploying Tetris Server..."' >> deployment/deploy-server.sh
+        echo 'echo "📦 Loading Docker image..."' >> deployment/deploy-server.sh
+        echo 'gunzip -c tetris-server.tar.gz | docker load' >> deployment/deploy-server.sh
+        echo 'echo "🛑 Stopping existing container..."' >> deployment/deploy-server.sh
+        echo 'docker stop tetris-server || true' >> deployment/deploy-server.sh
+        echo 'docker rm tetris-server || true' >> deployment/deploy-server.sh
+        echo 'echo "▶️ Starting new container..."' >> deployment/deploy-server.sh
+        echo 'docker run -d --name tetris-server -p 3001:3001 -e NODE_ENV=production -e PORT=3001 --restart unless-stopped tetris-server:latest' >> deployment/deploy-server.sh
+        echo 'echo "⏳ Waiting for container to be ready..."' >> deployment/deploy-server.sh
+        echo 'sleep 15' >> deployment/deploy-server.sh
+        echo 'echo "🏥 Testing health endpoint..."' >> deployment/deploy-server.sh
+        echo 'curl -f http://localhost:3001/health' >> deployment/deploy-server.sh
+        echo 'echo "✅ Deployment successful!"' >> deployment/deploy-server.sh
+        echo 'rm -f tetris-server.tar.gz' >> deployment/deploy-server.sh
+        
+        chmod +x deployment/deploy-server.sh
+        
+        # Final verification
+        echo "🔍 Final deployment folder contents:"
+        ls -la deployment/
+        echo "✅ Deployment package ready"
+        
+    - name: Upload deployment artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: server-deployment-package
+        path: deployment/
+        retention-days: 1
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download deployment artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: server-deployment-package
+        path: deployment/
+        
+    - name: Prepare server for deployment
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          # Create deployment directory with proper permissions
+          sudo mkdir -p /opt/tetris-server
+          sudo chown $USER:$USER /opt/tetris-server
+          sudo chmod 755 /opt/tetris-server
+          
+          # Verify directory exists and is writable
+          ls -la /opt/tetris-server
+          test -w /opt/tetris-server || exit 1
+          
+          echo "✅ Server prepared for deployment"
+          
+    - name: Copy deployment files to server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        source: "deployment/*"
+        target: "/opt/tetris-server/"
+        strip_components: 1
+        debug: true
+        
+    - name: Verify file copy
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          echo "Checking copied files..."
+          ls -la /opt/tetris-server/
+          
+          # Check optional files
+          optional_files=("nginx-server.conf" "setup-server-nginx.sh")
+          for file in "${optional_files[@]}"; do
+            if [ -f "/opt/tetris-server/$file" ]; then
+              echo "✅ Found optional file: $file"
+            else
+              echo "ℹ️ Optional file not found: $file"
+            fi
+          done
+          
+          # Verify the tar.gz file has content
+          file_size=$(stat -c%s "/opt/tetris-server/tetris-server.tar.gz")
+          echo "📦 Docker image file size: ${file_size} bytes"
+          
+          if [ "$file_size" -lt 100000 ]; then
+            echo "❌ Docker image file seems too small!"
+            exit 1
+          fi
+          
+          echo "✅ All required files copied successfully"
+        
+    - name: Deploy Tetris Server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          cd /opt/tetris-server
+          
+          # Run deployment script
+          chmod +x deploy-server.sh
+          ./deploy-server.sh
+          
+          # Show final status
+          echo "📊 Container Status:"
+          docker ps --filter name=tetris-server
+          echo "🎉 Tetris Server deployment completed!"
