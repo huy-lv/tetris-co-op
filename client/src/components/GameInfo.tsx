@@ -9,7 +9,6 @@ import {
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import { keyframes } from "@emotion/react";
 import {
   ScoreRounded,
   ViewStreamRounded,

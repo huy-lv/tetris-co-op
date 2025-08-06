@@ -19,7 +19,6 @@ import {
   SettingsRounded,
 } from "@mui/icons-material";
 import { GAME_STATES } from "../constants";
-import { gameService } from "../services/gameService";
 
 interface RoomSidebarProps {
   roomCode: string | null;

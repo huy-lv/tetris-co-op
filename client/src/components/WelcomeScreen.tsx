@@ -18,7 +18,6 @@ import {
 } from "@mui/material";
 import { keyframes } from "@emotion/react";
 import {
-  GamepadRounded,
   SportsEsportsRounded,
   AddRounded,
   LoginRounded,
