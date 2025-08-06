@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Box, Typography } from "@mui/material";
 import { styled, keyframes } from "@mui/system";
 import { TetrominoType } from "../types";
@@ -85,10 +85,40 @@ interface PlayerBoard {
   isGameOver: boolean;
 }
 
-const MultiBoard: React.FC = () => {
+export interface MultiBoardRef {
+  getPlayerBoardPositions: () => Array<{
+    playerId: string;
+    x: number;
+    y: number;
+  }>;
+}
+
+const MultiBoard = React.forwardRef<MultiBoardRef>((_props, ref) => {
   const [playerBoards, setPlayerBoards] = useState<Map<string, PlayerBoard>>(
     new Map()
   );
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Expose methods to parent component
+  React.useImperativeHandle(ref, () => ({
+    getPlayerBoardPositions: () => {
+      if (!containerRef.current) return [];
+
+      const container = containerRef.current;
+      const playerElements = container.querySelectorAll("[data-player-id]");
+
+      return Array.from(playerElements).map((element) => {
+        const rect = element.getBoundingClientRect();
+        const playerId = element.getAttribute("data-player-id") || "";
+
+        return {
+          playerId,
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        };
+      });
+    },
+  }));
 
   useEffect(() => {
     const handlePlayerStateUpdated = (data: PlayerStateUpdatedData) => {
@@ -135,9 +165,12 @@ const MultiBoard: React.FC = () => {
   }
 
   return (
-    <Container>
+    <Container ref={containerRef}>
       {boardsArray.map((board) => (
-        <PlayerBoardContainer key={board.playerId}>
+        <PlayerBoardContainer
+          key={board.playerId}
+          data-player-id={board.playerId}
+        >
           <PlayerName>
             {board.playerName}
             {board.isGameOver && " (Game Over)"}
@@ -167,6 +200,8 @@ const MultiBoard: React.FC = () => {
       ))}
     </Container>
   );
-};
+});
+
+MultiBoard.displayName = "MultiBoard";
 
 export default MultiBoard;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Container,
@@ -19,7 +19,10 @@ import { useGameLogic } from "../hooks/useGameLogic";
 import { useRoomNavigation } from "../hooks/useRoomNavigation";
 import { getControlsFromStorage } from "../utils/controlsUtils";
 import GameBoard from "../components/GameBoard";
-import MultiBoard from "../components/MultiBoard";
+import MultiBoard, { MultiBoardRef } from "../components/MultiBoard";
+import FireballEffect, {
+  FireballEffectRef,
+} from "../components/FireballEffect";
 import GameInfo from "../components/GameInfo";
 import SettingsDialog from "../components/SettingsDialog";
 import WinnerPopup from "../components/WinnerPopup";
@@ -48,6 +51,9 @@ const RoomPage: React.FC = () => {
   const [players, setPlayers] = useState<string[]>([]);
   const [multiplayerGameOver, setMultiplayerGameOver] =
     useState<MultiplayerGameOverState>({ isGameOver: false });
+  const multiBoardRef = useRef<MultiBoardRef>(null);
+  const fireballEffectRef = useRef<FireballEffectRef>(null);
+
   const {
     gameBoard,
     gameWinner,
@@ -150,6 +156,30 @@ const RoomPage: React.FC = () => {
       getControlsFromStorage();
     }
   }, [settingsOpen]);
+
+  // Track lines cleared and shoot fireballs
+  const lastLinesRef = useRef(gameBoard.lines);
+  useEffect(() => {
+    const currentLines = gameBoard.lines;
+    const previousLines = lastLinesRef.current;
+
+    if (currentLines > previousLines) {
+      const linesCleared = currentLines - previousLines;
+      console.log(`🔥 Lines cleared: ${linesCleared}, shooting fireball!`);
+
+      // Get all player board positions and shoot ONE fireball to first target
+      if (multiBoardRef.current && fireballEffectRef.current) {
+        const positions = multiBoardRef.current.getPlayerBoardPositions();
+        if (positions.length > 0) {
+          // Only shoot one fireball to the first player
+          const firstTarget = positions[0];
+          fireballEffectRef.current.shootFireball(firstTarget.x, firstTarget.y);
+        }
+      }
+    }
+
+    lastLinesRef.current = currentLines;
+  }, [gameBoard.lines]);
 
   // Check room code from gameService
   useEffect(() => {
@@ -398,55 +428,165 @@ const RoomPage: React.FC = () => {
         },
       }}
     >
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {isMobile ? (
-          /* Mobile Layout */
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              height: "calc(100vh - 64px)",
-              width: "100%",
-              gap: 1,
-              px: 1,
-              pb: 2, // Minimal padding since virtual controls float over
-            }}
-          >
-            {/* Mobile Game Info - Top */}
+      <FireballEffect ref={fireballEffectRef}>
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+          {isMobile ? (
+            /* Mobile Layout */
             <Box
               sx={{
-                width: "100%",
-                maxWidth: "400px",
-                flexShrink: 0,
                 display: "flex",
-                justifyContent: "center",
+                flexDirection: "column",
+                alignItems: "center",
+                height: "calc(100vh - 64px)",
+                width: "100%",
+                gap: 1,
+                px: 1,
+                pb: 2, // Minimal padding since virtual controls float over
               }}
             >
-              <GameInfo
-                score={gameBoard.score}
-                lines={gameBoard.lines}
-                level={gameBoard.level}
-                nextPiece={gameBoard.nextPiece}
-                holdPiece={gameBoard.holdPiece}
-                canHold={gameBoard.canHold}
+              {/* Mobile Game Info - Top */}
+              <Box
+                sx={{
+                  width: "100%",
+                  maxWidth: "400px",
+                  flexShrink: 0,
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <GameInfo
+                  score={gameBoard.score}
+                  lines={gameBoard.lines}
+                  level={gameBoard.level}
+                  nextPiece={gameBoard.nextPiece}
+                  holdPiece={gameBoard.holdPiece}
+                  canHold={gameBoard.canHold}
+                />
+              </Box>
+
+              {/* MultiBoard - Preview of other players */}
+              <MultiBoard ref={multiBoardRef} />
+
+              {/* Mobile Game Board - Center */}
+              <Box
+                sx={{
+                  flex: 1,
+                  display: "flex",
+                  justifyContent: "center",
+                  width: "100%",
+                  minHeight: 0,
+                }}
+              >
+                <Box position="relative">
+                  <GameBoard
+                    grid={gameBoard.grid}
+                    activePiece={gameBoard.activePiece}
+                    ghostPiece={gameBoard.ghostPiece}
+                    clearingRows={gameBoard.clearingRows}
+                    dropPosition={gameBoard.dropPosition}
+                    isShaking={gameBoard.isShaking}
+                  />
+
+                  <PauseOverlay
+                    isVisible={gameBoard.gameState === GAME_STATES.PAUSED}
+                  />
+
+                  <GameOverPopup
+                    isVisible={
+                      gameBoard.gameState === GAME_STATES.GAME_OVER &&
+                      !(
+                        gameWinner.hasWinner &&
+                        gameWinner.winner?.name === playerName
+                      )
+                    }
+                    score={gameBoard.score}
+                    lines={gameBoard.lines}
+                    level={gameBoard.level}
+                    onPlayAgain={() => gameService.restartGame()}
+                    onLeaveRoom={handleGoHome}
+                  />
+
+                  <WinnerPopup
+                    isVisible={
+                      gameWinner.hasWinner &&
+                      gameWinner.winner?.name === playerName
+                    }
+                    winner={gameWinner.winner}
+                    finalScores={gameWinner.finalScores}
+                    playerName={playerName}
+                    onPlayAgain={() => gameService.restartGame()}
+                  />
+                </Box>
+              </Box>
+
+              {/* Mobile Menu Button */}
+              <Fab
+                color="primary"
+                onClick={() => setMobileSidebarOpen(true)}
+                sx={{
+                  position: "fixed",
+                  bottom: 220, // Position above floating virtual controls
+                  right: 16,
+                  zIndex: 1000,
+                }}
+              >
+                <Menu />
+              </Fab>
+
+              {/* Virtual Controls - Only on Mobile */}
+              <VirtualControls
+                onMoveLeft={() => handleVirtualControl("moveLeft")}
+                onMoveRight={() => handleVirtualControl("moveRight")}
+                onMoveDown={() => handleVirtualControl("softDrop")}
+                onRotate={() => handleVirtualControl("rotate")}
+                onHardDrop={() => handleVirtualControl("hardDrop")}
+                onHold={() => handleVirtualControl("hold")}
+                onMoveLeftRelease={() =>
+                  handleVirtualControlRelease("moveLeft")
+                }
+                onMoveRightRelease={() =>
+                  handleVirtualControlRelease("moveRight")
+                }
+                onMoveDownRelease={() =>
+                  handleVirtualControlRelease("softDrop")
+                }
+                onRotateRelease={() => handleVirtualControlRelease("rotate")}
+                onHardDropRelease={() =>
+                  handleVirtualControlRelease("hardDrop")
+                }
+                onHoldRelease={() => handleVirtualControlRelease("hold")}
+              />
+
+              {/* Mobile Sidebar Popup */}
+              <MobileSidebarPopup
+                open={mobileSidebarOpen}
+                onClose={() => setMobileSidebarOpen(false)}
+                roomCode={roomCode}
+                roomId={roomId}
+                players={players}
+                playerName={playerName}
+                gameBoard={gameBoard}
+                gameWinner={gameWinner}
+                onCopyRoomCode={handleCopyRoomCode}
+                onStartGame={startGame}
+                onPauseGame={pauseGame}
+                onGoHome={handleGoHome}
+                onSettingsOpen={handleSettingsOpen}
               />
             </Box>
-
-            {/* MultiBoard - Preview of other players */}
-            <MultiBoard />
-
-            {/* Mobile Game Board - Center */}
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                justifyContent: "center",
-                width: "100%",
-                minHeight: 0,
-              }}
+          ) : (
+            /* Desktop Layout */
+            <Stack
+              direction="row"
+              spacing={4}
+              alignItems="flex-start"
+              justifyContent="center"
             >
+              {/* Left Side: Game Board */}
               <Box position="relative">
+                {/* MultiBoard - Preview of other players */}
+                <MultiBoard ref={multiBoardRef} />
+
                 <GameBoard
                   grid={gameBoard.grid}
                   activePiece={gameBoard.activePiece}
@@ -486,144 +626,43 @@ const RoomPage: React.FC = () => {
                   onPlayAgain={() => gameService.restartGame()}
                 />
               </Box>
-            </Box>
 
-            {/* Mobile Menu Button */}
-            <Fab
-              color="primary"
-              onClick={() => setMobileSidebarOpen(true)}
-              sx={{
-                position: "fixed",
-                bottom: 220, // Position above floating virtual controls
-                right: 16,
-                zIndex: 1000,
-              }}
-            >
-              <Menu />
-            </Fab>
-
-            {/* Virtual Controls - Only on Mobile */}
-            <VirtualControls
-              onMoveLeft={() => handleVirtualControl("moveLeft")}
-              onMoveRight={() => handleVirtualControl("moveRight")}
-              onMoveDown={() => handleVirtualControl("softDrop")}
-              onRotate={() => handleVirtualControl("rotate")}
-              onHardDrop={() => handleVirtualControl("hardDrop")}
-              onHold={() => handleVirtualControl("hold")}
-              onMoveLeftRelease={() => handleVirtualControlRelease("moveLeft")}
-              onMoveRightRelease={() =>
-                handleVirtualControlRelease("moveRight")
-              }
-              onMoveDownRelease={() => handleVirtualControlRelease("softDrop")}
-              onRotateRelease={() => handleVirtualControlRelease("rotate")}
-              onHardDropRelease={() => handleVirtualControlRelease("hardDrop")}
-              onHoldRelease={() => handleVirtualControlRelease("hold")}
-            />
-
-            {/* Mobile Sidebar Popup */}
-            <MobileSidebarPopup
-              open={mobileSidebarOpen}
-              onClose={() => setMobileSidebarOpen(false)}
-              roomCode={roomCode}
-              roomId={roomId}
-              players={players}
-              playerName={playerName}
-              gameBoard={gameBoard}
-              gameWinner={gameWinner}
-              onCopyRoomCode={handleCopyRoomCode}
-              onStartGame={startGame}
-              onPauseGame={pauseGame}
-              onGoHome={handleGoHome}
-              onSettingsOpen={handleSettingsOpen}
-            />
-          </Box>
-        ) : (
-          /* Desktop Layout */
-          <Stack
-            direction="row"
-            spacing={4}
-            alignItems="flex-start"
-            justifyContent="center"
-          >
-            {/* Left Side: Game Board */}
-            <Box position="relative">
-              {/* MultiBoard - Preview of other players */}
-              <MultiBoard />
-
-              <GameBoard
-                grid={gameBoard.grid}
-                activePiece={gameBoard.activePiece}
-                ghostPiece={gameBoard.ghostPiece}
-                clearingRows={gameBoard.clearingRows}
-                dropPosition={gameBoard.dropPosition}
-                isShaking={gameBoard.isShaking}
-              />
-
-              <PauseOverlay
-                isVisible={gameBoard.gameState === GAME_STATES.PAUSED}
-              />
-
-              <GameOverPopup
-                isVisible={
-                  gameBoard.gameState === GAME_STATES.GAME_OVER &&
-                  !(
-                    gameWinner.hasWinner &&
-                    gameWinner.winner?.name === playerName
-                  )
-                }
+              {/* Middle: Game Info */}
+              <GameInfo
                 score={gameBoard.score}
                 lines={gameBoard.lines}
                 level={gameBoard.level}
-                onPlayAgain={() => gameService.restartGame()}
-                onLeaveRoom={handleGoHome}
+                nextPiece={gameBoard.nextPiece}
+                holdPiece={gameBoard.holdPiece}
+                canHold={gameBoard.canHold}
               />
 
-              <WinnerPopup
-                isVisible={
-                  gameWinner.hasWinner && gameWinner.winner?.name === playerName
-                }
-                winner={gameWinner.winner}
-                finalScores={gameWinner.finalScores}
+              {/* Right Side: Toolbar */}
+              <RoomSidebar
+                roomCode={roomCode}
+                roomId={roomId}
+                players={players}
                 playerName={playerName}
-                onPlayAgain={() => gameService.restartGame()}
+                gameBoard={gameBoard}
+                gameWinner={gameWinner}
+                onCopyRoomCode={handleCopyRoomCode}
+                onStartGame={startGame}
+                onPauseGame={togglePause}
+                onGoHome={handleGoHome}
+                onSettingsOpen={handleSettingsOpen}
               />
-            </Box>
+            </Stack>
+          )}
 
-            {/* Middle: Game Info */}
-            <GameInfo
-              score={gameBoard.score}
-              lines={gameBoard.lines}
-              level={gameBoard.level}
-              nextPiece={gameBoard.nextPiece}
-              holdPiece={gameBoard.holdPiece}
-              canHold={gameBoard.canHold}
-            />
+          {/* Multiplayer Game Over Notification */}
+          <MultiplayerGameOverNotification
+            multiplayerGameOver={multiplayerGameOver}
+          />
 
-            {/* Right Side: Toolbar */}
-            <RoomSidebar
-              roomCode={roomCode}
-              roomId={roomId}
-              players={players}
-              playerName={playerName}
-              gameBoard={gameBoard}
-              gameWinner={gameWinner}
-              onCopyRoomCode={handleCopyRoomCode}
-              onStartGame={startGame}
-              onPauseGame={togglePause}
-              onGoHome={handleGoHome}
-              onSettingsOpen={handleSettingsOpen}
-            />
-          </Stack>
-        )}
-
-        {/* Multiplayer Game Over Notification */}
-        <MultiplayerGameOverNotification
-          multiplayerGameOver={multiplayerGameOver}
-        />
-
-        {/* Settings Dialog */}
-        <SettingsDialog open={settingsOpen} onClose={handleSettingsClose} />
-      </Container>
+          {/* Settings Dialog */}
+          <SettingsDialog open={settingsOpen} onClose={handleSettingsClose} />
+        </Container>
+      </FireballEffect>
     </Box>
   );
 };

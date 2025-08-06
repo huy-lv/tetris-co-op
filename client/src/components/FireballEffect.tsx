@@ -1,0 +1,92 @@
+import React, { useState, useCallback, useRef } from "react";
+import Fireball from "./Fireball";
+
+interface FireballData {
+  id: string;
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+}
+
+interface FireballEffectProps {
+  children?: React.ReactNode;
+}
+
+export interface FireballEffectRef {
+  shootFireball: (targetX: number, targetY: number) => void;
+  shootMultipleFireballs: (targets: { x: number; y: number }[]) => void;
+}
+
+const FireballEffect = React.forwardRef<FireballEffectRef, FireballEffectProps>(
+  ({ children }, ref) => {
+    const [fireballs, setFireballs] = useState<FireballData[]>([]);
+    const nextIdRef = useRef(0);
+
+    const shootFireball = useCallback((targetX: number, targetY: number) => {
+      // Get game board bottom center as starting point
+      const gameBoard =
+        document.querySelector('[data-testid="game-board"]') ||
+        document.querySelector(".MuiPaper-root"); // Fallback
+
+      let startX = window.innerWidth / 2;
+      let startY = window.innerHeight / 2;
+
+      if (gameBoard) {
+        const rect = gameBoard.getBoundingClientRect();
+        startX = rect.left + rect.width / 2;
+        startY = rect.bottom - 20; // Start from bottom of game board with small offset
+      }
+
+      const newFireball: FireballData = {
+        id: `fireball-${nextIdRef.current++}`,
+        startX,
+        startY,
+        targetX,
+        targetY,
+      };
+
+      setFireballs((prev) => [...prev, newFireball]);
+    }, []);
+
+    const shootMultipleFireballs = useCallback(
+      (targets: { x: number; y: number }[]) => {
+        targets.forEach((target, index) => {
+          setTimeout(() => {
+            shootFireball(target.x, target.y);
+          }, index * 150); // Stagger fireball shots by 150ms
+        });
+      },
+      [shootFireball]
+    );
+
+    const removeFireball = useCallback((id: string) => {
+      setFireballs((prev) => prev.filter((fb) => fb.id !== id));
+    }, []);
+
+    React.useImperativeHandle(ref, () => ({
+      shootFireball,
+      shootMultipleFireballs,
+    }));
+
+    return (
+      <>
+        {children}
+        {fireballs.map((fireball) => (
+          <Fireball
+            key={fireball.id}
+            startX={fireball.startX}
+            startY={fireball.startY}
+            targetX={fireball.targetX}
+            targetY={fireball.targetY}
+            onComplete={() => removeFireball(fireball.id)}
+          />
+        ))}
+      </>
+    );
+  }
+);
+
+FireballEffect.displayName = "FireballEffect";
+
+export default FireballEffect;
