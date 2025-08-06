@@ -5,21 +5,22 @@ FROM node:18-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy server package.json and package-lock.json
-COPY server/package*.json ./
-RUN npm ci --only=production
+# Copy server package.json and yarn.lock
+COPY server/package.json server/yarn.lock ./
+RUN yarn install --frozen-lockfile --production
 
 # Development dependencies for building
 FROM base AS builder
 WORKDIR /app
 
 # Copy server source code
-COPY server/package*.json ./
-RUN npm ci
+COPY server/package.json server/yarn.lock ./
+RUN yarn install --frozen-lockfile
 
-# Copy server source code and build
+# Copy server source code
 COPY server/ .
-RUN npm run build
+# Build the application
+RUN yarn build
 
 # Production image - only server
 FROM base AS runner

@@ -2,11 +2,12 @@
   "name": "tetris-coop-server",
   "version": "1.0.0",
   "description": "Backend server for Tetris Co-op multiplayer game",
-  "main": "src/server.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "test": "node test/test-client.js"
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.ts",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "tetris",
@@ -23,6 +24,12 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/express": "^4.17.0",
+    "@types/cors": "^2.8.0",
+    "@types/uuid": "^9.0.0",
+    "ts-node": "^10.9.0"
   }
 }

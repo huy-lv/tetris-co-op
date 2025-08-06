@@ -8,7 +8,7 @@ const isProduction =
 export const API_CONFIG = {
   BASE_URL: isProduction
     ? "https://tetris-server.huytrang.id.vn"
-    : "http://192.168.2.76:5001",
+    : "http://192.168.2.76:3001",
 } as const;
 
 export default API_CONFIG;

@@ -1,11 +1,11 @@
-const express = require("express");
-const http = require("http");
-const socketIo = require("socket.io");
-const cors = require("cors");
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import cors from "cors";
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
+const io = new Server(server, {
   cors: {
     origin: ["http://localhost:3000", "http://localhost:5173"],
     methods: ["GET", "POST"],
@@ -16,12 +16,35 @@ const io = socketIo(server, {
 app.use(cors());
 app.use(express.json());
 
+// Types
+interface PlayerData {
+  name: string;
+  socketId: string;
+  isReady: boolean;
+  gameState: any;
+  lastUpdate: Date;
+  isGameOver?: boolean;
+  score?: number;
+  level?: number;
+  linesCleared?: number;
+}
+
+interface GameRoomData {
+  roomCode: string;
+  hostSocketId: string | null;
+  players: Map<string, PlayerData>;
+  isStarted: boolean;
+  gameState: any;
+  createdAt: Date;
+  hostName?: string;
+}
+
 // Game state storage
-const rooms = new Map();
-const players = new Map(); // socketId -> playerInfo
+const rooms = new Map<string, GameRoom>();
+const players = new Map<string, any>(); // socketId -> playerInfo
 
 // Generate 6-character room code
-function generateRoomCode() {
+function generateRoomCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "";
   for (let i = 0; i < 6; i++) {
@@ -31,17 +54,25 @@ function generateRoomCode() {
 }
 
 // Room management
-class GameRoom {
-  constructor(roomCode, hostSocketId) {
+class GameRoom implements GameRoomData {
+  roomCode: string;
+  hostSocketId: string | null;
+  players: Map<string, PlayerData>;
+  isStarted: boolean;
+  gameState: any;
+  createdAt: Date;
+  hostName?: string;
+
+  constructor(roomCode: string, hostSocketId: string | null) {
     this.roomCode = roomCode;
     this.hostSocketId = hostSocketId;
-    this.players = new Map(); // socketId -> playerData
+    this.players = new Map();
     this.isStarted = false;
     this.gameState = null;
     this.createdAt = new Date();
   }
 
-  addPlayer(socketId, playerData) {
+  addPlayer(socketId: string, playerData: any): void {
     this.players.set(socketId, {
       ...playerData,
       socketId,
@@ -51,16 +82,17 @@ class GameRoom {
     });
   }
 
-  removePlayer(socketId) {
+  removePlayer(socketId: string): void {
     this.players.delete(socketId);
 
     // If host leaves, assign new host
     if (this.hostSocketId === socketId && this.players.size > 0) {
-      this.hostSocketId = this.players.keys().next().value;
+      const nextPlayer = this.players.keys().next().value;
+      this.hostSocketId = nextPlayer || null;
     }
   }
 
-  updatePlayerGameState(socketId, gameState) {
+  updatePlayerGameState(socketId: string, gameState: any): void {
     const player = this.players.get(socketId);
     if (player) {
       player.gameState = gameState;
@@ -68,13 +100,13 @@ class GameRoom {
     }
   }
 
-  startGame() {
+  startGame(): void {
     this.isStarted = true;
     // Initialize game state for all players
     for (const [socketId, player] of this.players) {
       player.gameState = {
         grid: Array(20)
-          .fill()
+          .fill(null)
           .map(() => Array(10).fill(null)),
         score: 0,
         lines: 0,
@@ -84,7 +116,7 @@ class GameRoom {
     }
   }
 
-  getPlayersData() {
+  getPlayersData(): any[] {
     return Array.from(this.players.values()).map((player) => ({
       socketId: player.socketId,
       name: player.name,
@@ -112,7 +144,6 @@ io.on("connection", (socket) => {
     }
 
     if (room.players.size >= 8) {
-      // Max 8 players
       socket.emit("error", { message: "Room is full (max 8 players)" });
       return;
     }
@@ -137,7 +168,7 @@ io.on("connection", (socket) => {
     // Add player to room using GameRoom method
     room.addPlayer(socket.id, playerData);
 
-    // Lưu thông tin player
+    // Store player info
     players.set(socket.id, {
       ...playerData,
       roomCode,
@@ -154,7 +185,6 @@ io.on("connection", (socket) => {
       newPlayer: playerData.name,
       roomCode,
     });
-    console.log(`Player ${playerData.name} joined room ${roomCode}`);
 
     // Send room info to joining player
     socket.emit("room_joined", {
@@ -199,7 +229,7 @@ io.on("connection", (socket) => {
     );
   });
 
-  // Game state update (on hard drop)
+  // Game state update
   socket.on("game_state_update", (gameState) => {
     const playerInfo = players.get(socket.id);
     if (!playerInfo) return;
@@ -214,33 +244,15 @@ io.on("connection", (socket) => {
       playerId: socket.id,
       playerName: playerInfo.name,
       gameState: gameState,
-      grid: gameState.grid, // Include grid for MultiBoard preview
+      grid: gameState.grid,
     });
 
     // Check game over logic
     const allPlayersData = room.getPlayersData();
     const alivePlayers = allPlayersData.filter((p) => !p.isGameOver);
-    const gameOverPlayers = allPlayersData.filter((p) => p.isGameOver);
 
-    console.log(`🎮 Game state update in room ${playerInfo.roomCode}:`);
-    console.log(`  - Total players: ${allPlayersData.length}`);
-    console.log(`  - Alive players: ${alivePlayers.length}`);
-    console.log(`  - Game over players: ${gameOverPlayers.length}`);
-    console.log(`  - Current player game over: ${gameState.isGameOver}`);
-    console.log(
-      `  - Players data:`,
-      allPlayersData.map((p) => ({
-        name: p.name,
-        isGameOver: p.isGameOver,
-        score: p.score,
-      }))
-    );
-
-    // Nếu có player vừa game over, thông báo cho tất cả
+    // If player just game over, notify all players
     if (gameState.isGameOver) {
-      console.log(
-        `🎮 Player ${playerInfo.name} just game over, notifying all players`
-      );
       io.to(playerInfo.roomCode).emit("player_game_over", {
         playerId: socket.id,
         playerName: playerInfo.name,
@@ -251,63 +263,32 @@ io.on("connection", (socket) => {
       });
     }
 
-    // Nếu chỉ còn 1 người chơi và có nhiều hơn 1 người ban đầu => có winner
+    // Check for game winner
     if (alivePlayers.length === 1 && allPlayersData.length > 1) {
       const winner = alivePlayers[0];
-
-      console.log(
-        `🏆 Game winner detected in room ${playerInfo.roomCode}: ${winner.name}`
-      );
       io.to(playerInfo.roomCode).emit("game_winner", {
         winner: winner,
         finalScores: allPlayersData.sort((a, b) => b.score - a.score),
         totalPlayers: allPlayersData.length,
       });
-
       room.isStarted = false;
-      console.log(`Game winner in room ${playerInfo.roomCode}: ${winner.name}`);
     }
-    // Nếu tất cả đều game over => kết thúc game
+    // If all players game over
     else if (alivePlayers.length === 0) {
       const topPlayer = allPlayersData.reduce((prev, current) =>
         prev.score > current.score ? prev : current
       );
-
       io.to(playerInfo.roomCode).emit("game_ended", {
         winner: topPlayer,
         finalScores: allPlayersData.sort((a, b) => b.score - a.score),
         totalPlayers: allPlayersData.length,
         reason: "all_players_game_over",
       });
-
       room.isStarted = false;
-      console.log(
-        `All players game over in room ${playerInfo.roomCode}, top scorer: ${topPlayer.name}`
-      );
     }
   });
 
-  // Player ready/unready
-  socket.on("toggle_ready", () => {
-    const playerInfo = players.get(socket.id);
-    if (!playerInfo) return;
-
-    const room = rooms.get(playerInfo.roomCode);
-    if (!room || room.isStarted) return;
-
-    const player = room.players.get(socket.id);
-    if (player) {
-      player.isReady = !player.isReady;
-
-      io.to(playerInfo.roomCode).emit("player_ready_changed", {
-        playerId: socket.id,
-        isReady: player.isReady,
-        players: room.getPlayersData(),
-      });
-    }
-  });
-
-  // Restart game after game over
+  // Restart game
   socket.on("restart_game", () => {
     const playerInfo = players.get(socket.id);
     if (!playerInfo) return;
@@ -315,17 +296,13 @@ io.on("connection", (socket) => {
     const room = rooms.get(playerInfo.roomCode);
     if (!room || room.isStarted) return;
 
-    console.log(
-      `🔄 Game restart requested in room ${playerInfo.roomCode} by ${playerInfo.name}`
-    );
-
     // Reset all players' game state
     room.players.forEach((player) => {
       player.isGameOver = false;
       player.score = 0;
       player.level = 1;
       player.linesCleared = 0;
-      player.isReady = true; // Auto ready for restart
+      player.isReady = true;
     });
 
     // Start the game immediately
@@ -340,87 +317,24 @@ io.on("connection", (socket) => {
       restartedBy: playerInfo.name,
       roomCode: playerInfo.roomCode,
     });
-
-    console.log(
-      `Game restarted in room ${playerInfo.roomCode} by ${playerInfo.name}. Total players: ${room.players.size}`
-    );
   });
 
-  // Pause game for all players
-  socket.on("pause_game", () => {
-    const playerInfo = players.get(socket.id);
-    if (!playerInfo) return;
-
-    const room = rooms.get(playerInfo.roomCode);
-    if (!room || !room.isStarted) return;
-
-    console.log(
-      `🎮 Game paused in room ${playerInfo.roomCode} by ${playerInfo.name}`
-    );
-
-    // Notify all players that game is paused
-    io.to(playerInfo.roomCode).emit("game_paused", {
-      pausedBy: playerInfo.name,
-      roomCode: playerInfo.roomCode,
-    });
-  });
-
-  // Resume game for all players
-  socket.on("resume_game", () => {
-    const playerInfo = players.get(socket.id);
-    console.log("🚀 ~ playerInfo:", playerInfo);
-    if (!playerInfo) return;
-
-    const room = rooms.get(playerInfo.roomCode);
-    console.log("🚀 ~ room:", room);
-    if (!room || !room.isStarted) return;
-
-    console.log(
-      `🎮 Game resumed in room ${playerInfo.roomCode} by ${playerInfo.name}`
-    );
-
-    // Notify all players that game is resumed
-    io.to(playerInfo.roomCode).emit("game_resumed", {
-      resumedBy: playerInfo.name,
-      roomCode: playerInfo.roomCode,
-    });
-  });
-
-  // Get room info
-  socket.on("get_room_info", () => {
+  // Handle sending garbage to opponents
+  socket.on("send_garbage", (data) => {
     const playerInfo = players.get(socket.id);
     if (!playerInfo) return;
 
     const room = rooms.get(playerInfo.roomCode);
     if (!room) return;
 
-    socket.emit("room_info", {
-      roomCode: room.roomCode,
-      isHost: socket.id === room.hostSocketId,
-      isStarted: room.isStarted,
-      players: room.getPlayersData(),
-    });
-  });
-
-  // Handle garbage rows attack
-  socket.on("send_garbage", (data) => {
-    const { targetPlayerId, garbageRows } = data;
-    const playerInfo = players.get(socket.id);
-
-    if (!playerInfo) return;
-
-    const room = rooms.get(playerInfo.roomCode);
-    if (!room || !room.isStarted) return;
-
     console.log(
-      `💥 ${playerInfo.name} sending ${garbageRows} garbage rows to player ${targetPlayerId}`
+      `💥 ${playerInfo.name} sending ${data.garbageRows} garbage rows to opponents`
     );
 
-    // Send garbage to target player
-    io.to(targetPlayerId).emit("receive_garbage", {
-      garbageRows,
-      fromPlayerId: socket.id,
-      fromPlayerName: playerInfo.name,
+    // Send garbage to all other players in the room
+    socket.to(playerInfo.roomCode).emit("receive_garbage", {
+      garbageRows: data.garbageRows,
+      fromPlayer: playerInfo.name,
     });
   });
 
@@ -434,7 +348,7 @@ io.on("connection", (socket) => {
       if (room) {
         const playerName = playerInfo.name;
 
-        // Remove player from room using GameRoom method
+        // Remove player from room
         room.removePlayer(socket.id);
 
         if (room.players.size === 0) {
@@ -451,56 +365,14 @@ io.on("connection", (socket) => {
             players: currentPlayers,
             roomCode: playerInfo.roomCode,
           });
-
-          console.log(
-            `${playerName} left room ${playerInfo.roomCode}. Remaining players: ${room.players.size}`
-          );
         }
       }
-
       players.delete(socket.id);
     }
   });
 });
 
 // REST API endpoints
-app.get("/api/rooms", (req, res) => {
-  const roomList = Array.from(rooms.values()).map((room) => ({
-    roomCode: room.roomCode,
-    playerCount: room.players.size,
-    isStarted: room.isStarted,
-    createdAt: room.createdAt,
-  }));
-
-  res.json(roomList);
-});
-
-app.get("/api/rooms/:roomCode", (req, res) => {
-  const room = rooms.get(req.params.roomCode);
-
-  if (!room) {
-    return res.status(404).json({ error: "Room not found" });
-  }
-
-  res.json({
-    roomCode: room.roomCode,
-    playerCount: room.players.size,
-    isStarted: room.isStarted,
-    players: room.getPlayersData(),
-    createdAt: room.createdAt,
-  });
-});
-
-app.get("/api/stats", (req, res) => {
-  res.json({
-    totalRooms: rooms.size,
-    totalPlayers: players.size,
-    activeGames: Array.from(rooms.values()).filter((room) => room.isStarted)
-      .length,
-  });
-});
-
-// Create room endpoint
 app.post("/api/rooms", (req, res) => {
   try {
     const { playerName, roomCode: requestedRoomCode } = req.body;
@@ -513,27 +385,17 @@ app.post("/api/rooms", (req, res) => {
       return res.status(400).json({ error: "Player name is required" });
     }
 
-    // Sử dụng roomCode được request hoặc tạo mới
     const roomCode = requestedRoomCode
       ? requestedRoomCode.toUpperCase()
       : generateRoomCode();
 
-    // Kiểm tra xem room đã tồn tại chưa
     if (requestedRoomCode && rooms.has(roomCode)) {
       return res.status(409).json({ error: "Room already exists" });
     }
 
-    // Tạo room instance với GameRoom class (hostSocketId sẽ được set khi join qua socket)
     const room = new GameRoom(roomCode, null);
-    room.hostName = playerName.trim(); // Temporary host name until socket connection
-
+    room.hostName = playerName.trim();
     rooms.set(roomCode, room);
-
-    console.log(
-      `🏠 Room created: ${roomCode} by ${playerName}${
-        requestedRoomCode ? " (custom code)" : ""
-      }`
-    );
 
     res.status(201).json({
       roomCode,
@@ -551,21 +413,9 @@ app.get("/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date().toISOString() });
 });
 
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
-  console.log(`🚀 Tetris Co-op Server running on port ${PORT}`);
-  console.log(`🔗 WebSocket server ready for connections`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Health check available at http://localhost:${PORT}/health`);
 });
-
-// Cleanup empty rooms every 5 minutes
-setInterval(() => {
-  const now = new Date();
-  for (const [roomCode, room] of rooms) {
-    // Remove rooms that are empty for more than 5 minutes
-    if (room.players.size === 0 && now - room.createdAt > 5 * 60 * 1000) {
-      rooms.delete(roomCode);
-      console.log(`Cleaned up empty room: ${roomCode}`);
-    }
-  }
-}, 5 * 60 * 1000);

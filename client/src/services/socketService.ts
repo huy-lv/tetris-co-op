@@ -22,7 +22,7 @@ export interface RoomData {
 
 class SocketService {
   private socket: Socket | null = null;
-  private serverUrl = "http://localhost:5001";
+  private serverUrl = "http://localhost:3001";
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
