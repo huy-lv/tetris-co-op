@@ -7,13 +7,13 @@ export const copyRoomLink = async (): Promise<void> => {
   const currentUrl = window.location.href;
 
   if (!currentUrl.includes("/room?id=")) {
-    toast.error("Không thể copy link room!");
+            toast.error("Cannot copy room link!");
     return;
   }
 
   try {
     await navigator.clipboard.writeText(currentUrl);
-    toast.success(`🎉 Đã copy link mời, hãy gửi cho bạn bè nhé!`);
+    toast.success(`🎉 Room link copied! Share it with your friends!`);
   } catch (error) {
     // Fallback for older browsers
     const textArea = document.createElement("textarea");
@@ -22,6 +22,6 @@ export const copyRoomLink = async (): Promise<void> => {
     textArea.select();
     document.execCommand("copy");
     document.body.removeChild(textArea);
-    toast.success(`🎉 Đã copy link mời, hãy gửi cho bạn bè nhé!`);
+    toast.success(`🎉 Room link copied! Share it with your friends!`);
   }
 };

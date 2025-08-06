@@ -30,6 +30,7 @@ import { useBot } from "../bot";
 import { getControlsFromStorage } from "../utils/controlsUtils";
 import { getStoredPlayerName } from "../utils/nameGenerator";
 import gameService from "../services/gameService";
+import { useNavigationGuard } from "./useNavigationGuard";
 
 const createInitialGameBoard = (): GameBoard => ({
   grid: createEmptyGrid(),
@@ -89,6 +90,20 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       setRoomCode(roomCodeFromUrl.toUpperCase());
     }
   }, [searchParams, roomCode]);
+
+  // Use navigation guard
+  useNavigationGuard({
+    gameState: gameBoard.gameState,
+    roomCode,
+    isInGame:
+      gameBoard.gameState === GAME_STATES.PLAYING ||
+      gameBoard.gameState === GAME_STATES.PAUSED,
+    onPauseGame: () => {
+      if (gameBoard.gameState === GAME_STATES.PLAYING) {
+        gameService.pauseGame();
+      }
+    },
+  });
 
   // Navigate to room URL
   const navigateToRoom = useCallback(
