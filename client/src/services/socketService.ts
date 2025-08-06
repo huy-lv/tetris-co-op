@@ -218,7 +218,12 @@ class SocketService {
 
   // Utility methods
   isConnected(): boolean {
-    return this.socket?.connected ?? false;
+    const connected = this.socket?.connected ?? false;
+    console.log(
+      "🚀 ~ SocketService ~ isConnected ~ this.socket?.connected:",
+      connected
+    );
+    return connected;
   }
 
   getReconnectingStatus(): boolean {

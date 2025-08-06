@@ -17,6 +17,7 @@ class SimpleGameService {
   private roomCode: string | null = null;
   private serverUrl = API_CONFIG.BASE_URL;
   private socket: Socket | null = null;
+  private isReconnecting = false;
 
   // Tự động tạo phòng khi game bắt đầu
   async createRoom(playerName: string): Promise<string> {
@@ -166,16 +167,45 @@ class SimpleGameService {
     if (!this.socket && this.roomCode) {
       this.socket = io(this.serverUrl, {
         withCredentials: true,
+        reconnection: false, // We'll handle reconnection manually
       });
 
-      this.socket.emit("join_room", {
-        roomCode: this.roomCode,
-        playerData: { name: playerName },
+      this.socket.on("connect", () => {
+        console.log("✅ GameService: Connected to server");
+        this.isReconnecting = false;
+        this.socket?.emit("join_room", {
+          roomCode: this.roomCode,
+          playerData: { name: playerName },
+        });
+      });
+
+      this.socket.on("disconnect", (reason) => {
+        console.log("🔌 GameService: Disconnected from server:", reason);
+        this.handleDisconnect(reason, playerName);
       });
 
       // Setup event listeners cho multiplayer
       this.setupMultiplayerEvents();
     }
+  }
+
+  private handleDisconnect(reason: string, playerName: string): void {
+    // Don't reconnect if it's a manual disconnect
+    if (reason === "io client disconnect") {
+      return;
+    }
+
+    this.isReconnecting = true;
+    console.log("🔄 GameService: Attempting to reconnect...");
+
+    // Simple reconnect logic - try to reconnect after 2 seconds
+    setTimeout(() => {
+      if (this.roomCode) {
+        console.log("🔄 GameService: Reconnecting to room:", this.roomCode);
+        this.socket = null; // Reset socket
+        this.connectSocket(playerName);
+      }
+    }, 2000);
   }
 
   private setupMultiplayerEvents(): void {
@@ -315,7 +345,20 @@ class SimpleGameService {
 
   // Check if multiplayer (có người khác trong phòng)
   isMultiplayer(): boolean {
+    return this.currentPlayers.length > 1;
+  }
+
+  // Check socket connection status
+  isConnected(): boolean {
+    console.log(
+      "🚀 ~ SimpleGameService ~ isConnected ~ this.socket?.connected:",
+      this.socket?.connected
+    );
     return this.socket?.connected ?? false;
+  }
+
+  getReconnectingStatus(): boolean {
+    return this.isReconnecting;
   }
 
   // Restart game after game over

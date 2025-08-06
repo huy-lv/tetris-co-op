@@ -8,13 +8,12 @@ import {
   Typography,
   Button,
   List,
-  ListItem,
-  ListItemText,
   Divider,
   Stack,
 } from "@mui/material";
 import { Close, PlayArrow, Pause, Home, Settings } from "@mui/icons-material";
 import RoomCodeDisplay from "./RoomCodeDisplay";
+import PlayerListItem from "./PlayerListItem";
 import { GAME_STATES } from "../constants";
 import { GameBoard as GameBoardType, GameWinnerState } from "../types";
 
@@ -128,21 +127,12 @@ const MobileSidebarPopup: React.FC<MobileSidebarPopupProps> = ({
               }}
             >
               {players.map((player, index) => (
-                <ListItem key={index} dense>
-                  <ListItemText
-                    primary={
-                      <Typography
-                        variant="body2"
-                        color={
-                          player === playerName ? "primary" : "text.primary"
-                        }
-                        sx={{ fontWeight: player === playerName ? 600 : 400 }}
-                      >
-                        {player === playerName ? `${player} (You)` : player}
-                      </Typography>
-                    }
-                  />
-                </ListItem>
+                <PlayerListItem
+                  key={index}
+                  playerName={player}
+                  isCurrentPlayer={player === playerName}
+                  showAvatar={false}
+                />
               ))}
             </List>
           </Box>

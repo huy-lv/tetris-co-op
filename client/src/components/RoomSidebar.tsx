@@ -1,15 +1,5 @@
 import React from "react";
-import {
-  Stack,
-  Paper,
-  Typography,
-  Box,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  Avatar,
-} from "@mui/material";
+import { Stack, Paper, Typography, Box, Button, List } from "@mui/material";
 import {
   PlayArrowRounded,
   PauseRounded,
@@ -17,6 +7,7 @@ import {
   SettingsRounded,
 } from "@mui/icons-material";
 import RoomCodeDisplay from "./RoomCodeDisplay";
+import PlayerListItem from "./PlayerListItem";
 import { GAME_STATES } from "../constants";
 
 // Common button styles
@@ -101,47 +92,11 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
           </Typography>
           <List dense sx={{ py: 0 }}>
             {players.map((player, index) => (
-              <ListItem
+              <PlayerListItem
                 key={index}
-                sx={{
-                  py: 0.5,
-                  px: 1,
-                  borderRadius: 1,
-                  mb: 0.5,
-                  background:
-                    player === playerName
-                      ? "rgba(0, 170, 255, 0.1)"
-                      : "rgba(255, 255, 255, 0.05)",
-                  border:
-                    player === playerName
-                      ? "1px solid rgba(0, 170, 255, 0.3)"
-                      : "1px solid transparent",
-                }}
-              >
-                <Avatar
-                  sx={{
-                    width: 24,
-                    height: 24,
-                    mr: 1.5,
-                    fontSize: "0.75rem",
-                    background:
-                      player === playerName
-                        ? "linear-gradient(45deg, #00aaff, #0088cc)"
-                        : "linear-gradient(45deg, #666, #888)",
-                  }}
-                >
-                  {player.charAt(0).toUpperCase()}
-                </Avatar>
-                <ListItemText
-                  primary={player === playerName ? `${player} (You)` : player}
-                  primaryTypographyProps={{
-                    variant: "body2",
-                    color:
-                      player === playerName ? "primary.light" : "text.primary",
-                    fontWeight: player === playerName ? 600 : 400,
-                  }}
-                />
-              </ListItem>
+                playerName={player}
+                isCurrentPlayer={player === playerName}
+              />
             ))}
           </List>
           {players.length < 8 && (

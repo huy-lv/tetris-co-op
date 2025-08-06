@@ -174,15 +174,6 @@ const GameInfo: React.FC<GameInfoProps> = ({
               >
                 <NextPiece type={nextPiece} blockSize={isMobile ? 12 : 18} />
               </Box>
-
-              <Typography
-                variant="caption"
-                textAlign="center"
-                color="text.secondary"
-                sx={{ mt: 1, display: "block" }}
-              >
-                {nextPiece.toUpperCase()}
-              </Typography>
             </CardContent>
           </Card>
         )}
@@ -238,15 +229,6 @@ const GameInfo: React.FC<GameInfoProps> = ({
                 </Typography>
               )}
             </Box>
-
-            <Typography
-              variant="caption"
-              textAlign="center"
-              color="text.secondary"
-              sx={{ mt: 1, display: "block" }}
-            >
-              {holdPiece ? holdPiece.toUpperCase() : "Press B"}
-            </Typography>
           </CardContent>
         </Card>
       </Stack>
