@@ -321,14 +321,12 @@ const RoomPage: React.FC = () => {
   };
 
   const handleCopyRoomCode = async () => {
-    const codeToShare = roomCode || roomId;
-    if (codeToShare) {
-      try {
-        await navigator.clipboard.writeText(codeToShare);
-        console.log("Room code copied:", codeToShare);
-      } catch (error) {
-        console.error("Failed to copy room code:", error);
-      }
+    const currentUrl = window.location.href;
+    try {
+      await navigator.clipboard.writeText(currentUrl);
+      console.log("URL copied:", currentUrl);
+    } catch (error) {
+      console.error("Failed to copy URL:", error);
     }
   };
 
