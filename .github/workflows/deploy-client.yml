@@ -48,9 +48,10 @@ jobs:
         run: |
           cp -r client/dist/* out/tetris/
       
-      - name: Add SPA fallback (optional)
+      - name: Add SPA fallback for GitHub Pages
         run: |
-          cp out/tetris/index.html out/tetris/404.html
+          # Copy index.html to 404.html in root for GitHub Pages SPA routing
+          cp out/tetris/index.html out/404.html
 
       - name: Commit and push
         run: |
