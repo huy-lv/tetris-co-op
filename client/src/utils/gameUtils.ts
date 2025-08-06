@@ -163,7 +163,7 @@ export const addGarbageRows = (
   for (let i = 0; i < numRows; i++) {
     const garbageRow: (TetrominoType | null)[] = Array(
       GAME_CONFIG.BOARD_WIDTH
-    ).fill("GARBAGE" as TetrominoType);
+    ).fill("I" as TetrominoType); // Use "I" type for garbage blocks
     // Add one random empty space in each garbage row
     const emptyIndex = Math.floor(Math.random() * GAME_CONFIG.BOARD_WIDTH);
     garbageRow[emptyIndex] = null;

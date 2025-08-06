@@ -7,7 +7,7 @@ export const GAME_CONFIG = {
   LINES_PER_LEVEL: 10,
 } as const;
 
-export const TEST_MODE = true; // Set to true to always spawn O pieces for testing
+export const TEST_MODE = false; // Set to true to always spawn O pieces for testing
 
 export const CONTROLS = {
   MOVE_LEFT: "a",
@@ -109,7 +109,6 @@ export const TETROMINO_SHAPES = {
       [0, 1],
     ],
   ],
-  GARBAGE: [[[1]]], // Simple 1x1 shape for garbage blocks
 } as const;
 
 export const TETROMINO_COLORS = {
@@ -120,7 +119,6 @@ export const TETROMINO_COLORS = {
   Z: "#f00000",
   J: "#0000f0",
   L: "#f0a000",
-  GARBAGE: "#808080", // Gray color for garbage blocks
 } as const;
 
 export const GAME_STATES = {
