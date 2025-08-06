@@ -67,7 +67,9 @@ class SimpleGameService {
   // Kết nối socket chỉ khi cần
   private async connectSocket(playerName: string = "Player"): Promise<void> {
     if (!this.socket && this.roomCode) {
-      this.socket = io(this.serverUrl);
+      this.socket = io(this.serverUrl, {
+        withCredentials: true
+      });
 
       this.socket.emit("join_room", {
         roomCode: this.roomCode,
