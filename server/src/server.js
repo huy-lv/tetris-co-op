@@ -214,6 +214,7 @@ io.on("connection", (socket) => {
       playerId: socket.id,
       playerName: playerInfo.name,
       gameState: gameState,
+      grid: gameState.grid, // Include grid for MultiBoard preview
     });
 
     // Check game over logic

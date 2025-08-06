@@ -48,6 +48,18 @@ export interface PlayerGameOverData {
   allPlayersData: Player[];
 }
 
+export interface PlayerStateUpdatedData {
+  playerId: string;
+  playerName: string;
+  gameState: {
+    score: number;
+    lines: number;
+    level: number;
+    isGameOver: boolean;
+  };
+  grid: (string | null)[][];
+}
+
 export interface MultiplayerGameOverState {
   isGameOver: boolean;
   playerName?: string;

@@ -37,8 +37,7 @@ const WinnerPopup: React.FC<WinnerPopupProps> = ({
       alignItems="center"
       justifyContent="center"
       sx={{
-        background: "rgba(0, 0, 0, 0.9)",
-        backdropFilter: "blur(10px)",
+        background: "rgba(0, 0, 0, 0.5)",
         borderRadius: 3,
         zIndex: 2000,
       }}

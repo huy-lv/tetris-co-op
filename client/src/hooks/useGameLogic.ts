@@ -59,6 +59,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   const lastDropTimeRef = useRef<number>(0);
   const keysPressed = useRef<Set<string>>(new Set());
   const lastMoveTimeRef = useRef<{ [key: string]: number }>({});
+  const shouldSendGridRef = useRef<boolean>(false);
 
   // Listen for successful room join to transition from WELCOME to WAITING
   useEffect(() => {
@@ -226,7 +227,10 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       gameBoard.gameState === GAME_STATES.GAME_OVER &&
       gameService.isMultiplayer()
     ) {
+      shouldSendGridRef.current = true;
+
       const gameState = {
+        grid: gameBoard.grid,
         score: gameBoard.score,
         lines: gameBoard.lines,
         level: gameBoard.level,
@@ -236,7 +240,13 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       console.log("🎮 Sending game over state to server:", gameState);
       gameService.updateGameState(gameState);
     }
-  }, [gameBoard.gameState, gameBoard.score, gameBoard.lines, gameBoard.level]);
+  }, [
+    gameBoard.gameState,
+    gameBoard.score,
+    gameBoard.lines,
+    gameBoard.level,
+    gameBoard.grid,
+  ]);
 
   // Bot functionality
   const bot = useBot(
@@ -324,6 +334,9 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         if (direction === "down") {
           const newGrid = placeTetromino(prev.grid, prev.activePiece);
           const linesToClear = findLinesToClear(newGrid);
+
+          // Mark that we need to send grid update after piece placement
+          shouldSendGridRef.current = true;
 
           // If there are lines to clear, start animation and shake
           if (linesToClear.length > 0) {
@@ -662,6 +675,9 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         };
       }
     });
+
+    // Mark that we need to send grid update after state change
+    shouldSendGridRef.current = true;
   }, [spawnNewPiece, updateGhostPiece]);
 
   const holdActivePiece = useCallback(() => {
@@ -1078,7 +1094,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       gameBoard.gameState === GAME_STATES.GAME_OVER
     ) {
       const gameState = {
-        grid: gameBoard.grid,
+        grid: shouldSendGridRef.current ? gameBoard.grid : undefined,
         score: gameBoard.score,
         lines: gameBoard.lines,
         level: gameBoard.level,
@@ -1089,8 +1105,17 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       if (gameService.isMultiplayer()) {
         gameService.updateGameState(gameState);
       }
+
+      // Reset flag after sending
+      shouldSendGridRef.current = false;
     }
-  }, [gameBoard.score, gameBoard.lines, gameBoard.level, gameBoard.gameState]);
+  }, [
+    gameBoard.score,
+    gameBoard.lines,
+    gameBoard.level,
+    gameBoard.gameState,
+    gameBoard.grid,
+  ]);
 
   return {
     gameBoard,

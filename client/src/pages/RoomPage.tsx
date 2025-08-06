@@ -19,6 +19,7 @@ import { useGameLogic } from "../hooks/useGameLogic";
 import { useRoomNavigation } from "../hooks/useRoomNavigation";
 import { getControlsFromStorage } from "../utils/controlsUtils";
 import GameBoard from "../components/GameBoard";
+import MultiBoard from "../components/MultiBoard";
 import GameInfo from "../components/GameInfo";
 import SettingsDialog from "../components/SettingsDialog";
 import WinnerPopup from "../components/WinnerPopup";
@@ -432,6 +433,9 @@ const RoomPage: React.FC = () => {
               />
             </Box>
 
+            {/* MultiBoard - Preview of other players */}
+            <MultiBoard />
+
             {/* Mobile Game Board - Center */}
             <Box
               sx={{
@@ -543,6 +547,9 @@ const RoomPage: React.FC = () => {
           >
             {/* Left Side: Game Board */}
             <Box position="relative">
+              {/* MultiBoard - Preview of other players */}
+              <MultiBoard />
+
               <GameBoard
                 grid={gameBoard.grid}
                 activePiece={gameBoard.activePiece}

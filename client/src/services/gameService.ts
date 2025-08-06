@@ -12,6 +12,7 @@ import {
   Player,
   GameStateUpdate,
 } from "../types";
+import { PlayerStateUpdatedData } from "../types/multiplayer";
 
 class SimpleGameService {
   private roomCode: string | null = null;
@@ -130,6 +131,11 @@ class SimpleGameService {
       this.onPlayerGameOver?.(data);
     });
 
+    this.socket.on("player_state_updated", (data: PlayerStateUpdatedData) => {
+      console.log("Player state updated:", data);
+      this.onPlayerStateUpdated?.(data);
+    });
+
     this.socket.on("game_winner", (data: GameWinnerData) => {
       console.log("Game winner:", data);
       this.onGameWinner?.(data);
@@ -201,6 +207,7 @@ class SimpleGameService {
   onGamePaused?: (data: { pausedBy: string; roomCode: string }) => void;
   onGameResumed?: (data: { resumedBy: string; roomCode: string }) => void;
   onGameStateUpdate?: (data: unknown) => void;
+  onPlayerStateUpdated?: (data: PlayerStateUpdatedData) => void;
   onPlayerGameOver?: (data: PlayerGameOverData) => void;
   onGameWinner?: (data: GameWinnerData) => void;
   onGameEnded?: (data: GameEndedData) => void;
