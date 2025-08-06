@@ -28,7 +28,7 @@ class SocketService {
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.socket = io(this.serverUrl, {
-        withCredentials: true
+        withCredentials: true,
       });
 
       this.socket.on("connect", () => {
