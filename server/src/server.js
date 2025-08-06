@@ -306,6 +306,85 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Restart game after game over
+  socket.on("restart_game", () => {
+    const playerInfo = players.get(socket.id);
+    if (!playerInfo) return;
+
+    const room = rooms.get(playerInfo.roomCode);
+    if (!room || room.isStarted) return;
+
+    console.log(
+      `🔄 Game restart requested in room ${playerInfo.roomCode} by ${playerInfo.name}`
+    );
+
+    // Reset all players' game state
+    room.players.forEach((player) => {
+      player.isGameOver = false;
+      player.score = 0;
+      player.level = 1;
+      player.linesCleared = 0;
+      player.isReady = true; // Auto ready for restart
+    });
+
+    // Start the game immediately
+    room.startGame();
+
+    // Get updated players data
+    const currentPlayers = room.getPlayersData();
+
+    // Notify all players that game restarted
+    io.to(playerInfo.roomCode).emit("game_restarted", {
+      players: currentPlayers,
+      restartedBy: playerInfo.name,
+      roomCode: playerInfo.roomCode,
+    });
+
+    console.log(
+      `Game restarted in room ${playerInfo.roomCode} by ${playerInfo.name}. Total players: ${room.players.size}`
+    );
+  });
+
+  // Pause game for all players
+  socket.on("pause_game", () => {
+    const playerInfo = players.get(socket.id);
+    if (!playerInfo) return;
+
+    const room = rooms.get(playerInfo.roomCode);
+    if (!room || !room.isStarted) return;
+
+    console.log(
+      `🎮 Game paused in room ${playerInfo.roomCode} by ${playerInfo.name}`
+    );
+
+    // Notify all players that game is paused
+    io.to(playerInfo.roomCode).emit("game_paused", {
+      pausedBy: playerInfo.name,
+      roomCode: playerInfo.roomCode,
+    });
+  });
+
+  // Resume game for all players
+  socket.on("resume_game", () => {
+    const playerInfo = players.get(socket.id);
+    console.log("🚀 ~ playerInfo:", playerInfo);
+    if (!playerInfo) return;
+
+    const room = rooms.get(playerInfo.roomCode);
+    console.log("🚀 ~ room:", room);
+    if (!room || !room.isStarted) return;
+
+    console.log(
+      `🎮 Game resumed in room ${playerInfo.roomCode} by ${playerInfo.name}`
+    );
+
+    // Notify all players that game is resumed
+    io.to(playerInfo.roomCode).emit("game_resumed", {
+      resumedBy: playerInfo.name,
+      roomCode: playerInfo.roomCode,
+    });
+  });
+
   // Get room info
   socket.on("get_room_info", () => {
     const playerInfo = players.get(socket.id);

@@ -53,6 +53,10 @@ const RoomPage: React.FC = () => {
     playerName,
     startGame,
     pauseGame,
+    togglePause,
+    forcePause,
+    forceResume,
+    resetGame,
     handleKeyPress,
     handleKeyRelease,
   } = useGameLogic(settingsOpen);
@@ -193,6 +197,34 @@ const RoomPage: React.FC = () => {
         }
       };
 
+      const handleGameRestarted = (data: GameStartedData) => {
+        console.log("Game restarted event:", data);
+        if (data.players) {
+          setPlayers(data.players.map((p: Player) => p.name));
+        }
+        // Reset và start lại game
+        resetGame();
+        startGame();
+      };
+
+      const handleGamePaused = (data: {
+        pausedBy: string;
+        roomCode: string;
+      }) => {
+        console.log("Game paused by:", data.pausedBy);
+        // Force pause game state for all players
+        forcePause();
+      };
+
+      const handleGameResumed = (data: {
+        resumedBy: string;
+        roomCode: string;
+      }) => {
+        console.log("Game resumed by:", data.resumedBy);
+        // Force resume game state for all players
+        forceResume();
+      };
+
       const handlePlayerGameOver = (data: PlayerGameOverData) => {
         console.log("Player game over event:", data);
         if (data.playerName !== playerName) {
@@ -218,6 +250,9 @@ const RoomPage: React.FC = () => {
       gameService.onPlayerJoined = handlePlayerJoined;
       gameService.onPlayerLeft = handlePlayerLeft;
       gameService.onGameStarted = handleGameStarted;
+      gameService.onGameRestarted = handleGameRestarted;
+      gameService.onGamePaused = handleGamePaused;
+      gameService.onGameResumed = handleGameResumed;
       gameService.onPlayerGameOver = handlePlayerGameOver;
       // Không set handlers cho game_winner và game_ended vì useGameLogic đã quản lý
 
@@ -227,6 +262,9 @@ const RoomPage: React.FC = () => {
         gameService.onPlayerJoined = undefined;
         gameService.onPlayerLeft = undefined;
         gameService.onGameStarted = undefined;
+        gameService.onGameRestarted = undefined;
+        gameService.onGamePaused = undefined;
+        gameService.onGameResumed = undefined;
         gameService.onPlayerGameOver = undefined;
         gameService.onGameWinner = undefined;
         gameService.onGameEnded = undefined;
@@ -429,7 +467,7 @@ const RoomPage: React.FC = () => {
                   score={gameBoard.score}
                   lines={gameBoard.lines}
                   level={gameBoard.level}
-                  onPlayAgain={() => window.location.reload()}
+                  onPlayAgain={() => gameService.restartGame()}
                   onLeaveRoom={handleGoHome}
                 />
 
@@ -441,7 +479,7 @@ const RoomPage: React.FC = () => {
                   winner={gameWinner.winner}
                   finalScores={gameWinner.finalScores}
                   playerName={playerName}
-                  onPlayAgain={() => window.location.reload()}
+                  onPlayAgain={() => gameService.restartGame()}
                 />
               </Box>
             </Box>
@@ -529,7 +567,7 @@ const RoomPage: React.FC = () => {
                 score={gameBoard.score}
                 lines={gameBoard.lines}
                 level={gameBoard.level}
-                onPlayAgain={() => window.location.reload()}
+                onPlayAgain={() => gameService.restartGame()}
                 onLeaveRoom={handleGoHome}
               />
 
@@ -540,7 +578,7 @@ const RoomPage: React.FC = () => {
                 winner={gameWinner.winner}
                 finalScores={gameWinner.finalScores}
                 playerName={playerName}
-                onPlayAgain={() => window.location.reload()}
+                onPlayAgain={() => gameService.restartGame()}
               />
             </Box>
 
@@ -564,7 +602,7 @@ const RoomPage: React.FC = () => {
               gameWinner={gameWinner}
               onCopyRoomCode={handleCopyRoomCode}
               onStartGame={startGame}
-              onPauseGame={pauseGame}
+              onPauseGame={togglePause}
               onGoHome={handleGoHome}
               onSettingsOpen={handleSettingsOpen}
             />

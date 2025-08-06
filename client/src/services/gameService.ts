@@ -104,6 +104,27 @@ class SimpleGameService {
       this.onGameStarted?.(data);
     });
 
+    this.socket.on("game_restarted", (data: GameStartedData) => {
+      console.log("Game restarted by:", data);
+      this.onGameRestarted?.(data);
+    });
+
+    this.socket.on(
+      "game_paused",
+      (data: { pausedBy: string; roomCode: string }) => {
+        console.log("Game paused by:", data);
+        this.onGamePaused?.(data);
+      }
+    );
+
+    this.socket.on(
+      "game_resumed",
+      (data: { resumedBy: string; roomCode: string }) => {
+        console.log("Game resumed by:", data);
+        this.onGameResumed?.(data);
+      }
+    );
+
     this.socket.on("player_game_over", (data: PlayerGameOverData) => {
       console.log("Player game over:", data);
       this.onPlayerGameOver?.(data);
@@ -176,6 +197,9 @@ class SimpleGameService {
   onPlayerLeft?: (data: PlayerLeftData) => void;
   onRoomJoined?: (data: RoomJoinedData) => void;
   onGameStarted?: (data: GameStartedData) => void;
+  onGameRestarted?: (data: GameStartedData) => void;
+  onGamePaused?: (data: { pausedBy: string; roomCode: string }) => void;
+  onGameResumed?: (data: { resumedBy: string; roomCode: string }) => void;
   onGameStateUpdate?: (data: unknown) => void;
   onPlayerGameOver?: (data: PlayerGameOverData) => void;
   onGameWinner?: (data: GameWinnerData) => void;
@@ -212,6 +236,27 @@ class SimpleGameService {
   // Check if multiplayer (có người khác trong phòng)
   isMultiplayer(): boolean {
     return this.socket?.connected ?? false;
+  }
+
+  // Restart game after game over
+  restartGame(): void {
+    if (this.socket && this.roomCode) {
+      this.socket.emit("restart_game");
+    }
+  }
+
+  // Pause game for all players
+  pauseGame(): void {
+    if (this.socket && this.roomCode) {
+      this.socket.emit("pause_game");
+    }
+  }
+
+  // Resume game for all players
+  resumeGame(): void {
+    if (this.socket && this.roomCode) {
+      this.socket.emit("resume_game");
+    }
   }
 
   disconnect(): void {

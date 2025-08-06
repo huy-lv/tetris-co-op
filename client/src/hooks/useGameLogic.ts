@@ -97,6 +97,37 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       lastDropTimeRef.current = Date.now();
     };
 
+    // Setup event listener for game restarted
+    const handleGameRestarted = (data: GameStartedData) => {
+      console.log("🔄 Game restarted by other player:", data);
+
+      // Reset gameWinner state
+      setGameWinner({
+        hasWinner: false,
+        winner: null,
+        finalScores: [],
+        totalPlayers: 0,
+      });
+
+      // Reset game board to initial state and start playing
+      setGameBoard(() => {
+        const initialBoard = createInitialGameBoard();
+        const type = initialBoard.nextPiece || getRandomTetromino();
+        const newActivePiece = createTetromino(type, {
+          x: Math.floor(GAME_CONFIG.BOARD_WIDTH / 2) - 1,
+          y: -1,
+        });
+
+        return {
+          ...initialBoard,
+          activePiece: newActivePiece,
+          ghostPiece: null, // Sẽ được update trong useEffect khác
+          gameState: GAME_STATES.PLAYING,
+        };
+      });
+      lastDropTimeRef.current = Date.now();
+    };
+
     // Setup event listener for when someone wins
     const handleGameWinner = (data: GameWinnerData) => {
       console.log("🎮 Game winner detected, stopping game:", data);
@@ -109,26 +140,15 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         totalPlayers: data.totalPlayers,
       });
 
-      // Chỉ set GAME_OVER cho người thua, người thắng giữ nguyên gameState
+      // Set GAME_OVER cho tất cả người chơi (bao gồm cả winner)
       setGameBoard((prev: GameBoard) => {
-        // Nếu mình là người thắng, không thay đổi gameState
-        if (data.winner?.name === playerName) {
-          console.log("🏆 I am the winner! Keeping current game state");
-          return {
-            ...prev,
-            activePiece: null, // Remove active piece
-            ghostPiece: null,
-            // Không thay đổi gameState - người thắng vẫn đang PLAYING
-          };
-        } else {
-          console.log("😵 I am not the winner, setting GAME_OVER");
-          return {
-            ...prev,
-            gameState: GAME_STATES.GAME_OVER,
-            activePiece: null, // Remove active piece
-            ghostPiece: null,
-          };
-        }
+        console.log("🏆 Setting GAME_OVER for all players including winner");
+        return {
+          ...prev,
+          gameState: GAME_STATES.GAME_OVER,
+          activePiece: null, // Remove active piece
+          ghostPiece: null,
+        };
       });
     };
 
@@ -156,6 +176,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     // Assign the event handlers
     gameService.onRoomJoined = handleRoomJoined;
     gameService.onGameStarted = handleGameStarted;
+    gameService.onGameRestarted = handleGameRestarted;
     gameService.onGameWinner = handleGameWinner;
     gameService.onGameEnded = handleGameEnded;
 
@@ -186,6 +207,9 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       }
       if (gameService.onGameStarted === handleGameStarted) {
         gameService.onGameStarted = undefined;
+      }
+      if (gameService.onGameRestarted === handleGameRestarted) {
+        gameService.onGameRestarted = undefined;
       }
       if (gameService.onGameWinner === handleGameWinner) {
         gameService.onGameWinner = undefined;
@@ -734,14 +758,55 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   }, [spawnNewPiece]);
 
   const pauseGame = useCallback(() => {
+    // Always pause local game state immediately
     setGameBoard((prev: GameBoard) => ({
       ...prev,
-      gameState:
-        prev.gameState === GAME_STATES.PLAYING
-          ? GAME_STATES.PAUSED
-          : GAME_STATES.PLAYING,
+      gameState: GAME_STATES.PAUSED,
+    }));
+
+    // If multiplayer, send pause event to all players
+    if (gameService.isMultiplayer()) {
+      gameService.pauseGame();
+    }
+  }, []);
+
+  const resumeGame = useCallback(() => {
+    // Always resume local game state immediately
+    setGameBoard((prev: GameBoard) => ({
+      ...prev,
+      gameState: GAME_STATES.PLAYING,
+    }));
+
+    // If multiplayer, send resume event to all players
+    if (gameService.isMultiplayer()) {
+      gameService.resumeGame();
+    }
+  }, []);
+
+  // Force set pause state without sending multiplayer event
+  const forcePause = useCallback(() => {
+    setGameBoard((prev: GameBoard) => ({
+      ...prev,
+      gameState: GAME_STATES.PAUSED,
     }));
   }, []);
+
+  // Force set resume state without sending multiplayer event
+  const forceResume = useCallback(() => {
+    setGameBoard((prev: GameBoard) => ({
+      ...prev,
+      gameState: GAME_STATES.PLAYING,
+    }));
+  }, []);
+
+  // Toggle pause/resume state
+  const togglePause = useCallback(() => {
+    if (gameBoard.gameState === GAME_STATES.PLAYING) {
+      pauseGame();
+    } else if (gameBoard.gameState === GAME_STATES.PAUSED) {
+      resumeGame();
+    }
+  }, [gameBoard.gameState, pauseGame, resumeGame]);
 
   const resetGame = useCallback(() => {
     setGameBoard(createInitialGameBoard());
@@ -788,6 +853,12 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       const lowerKey = key.toLowerCase();
       const currentControls = getControlsFromStorage();
 
+      // Handle pause/resume with Escape key
+      if (lowerKey === "escape") {
+        togglePause();
+        return;
+      }
+
       // Auto-resume game if paused and movement key is pressed
       const movementKeys = [
         currentControls.MOVE_LEFT,
@@ -802,11 +873,10 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         gameBoard.gameState === GAME_STATES.PAUSED &&
         movementKeys.includes(lowerKey as (typeof movementKeys)[number])
       ) {
-        // Resume game first
-        setGameBoard((prev: GameBoard) => ({
-          ...prev,
-          gameState: GAME_STATES.PLAYING,
-        }));
+        // Resume game for all players in multiplayer
+        togglePause();
+        // Don't process the key press further, just resume
+        return;
       }
 
       // Handle rotation and hard drop immediately (non-continuous)
@@ -855,6 +925,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       rotateActivePiece,
       hardDrop,
       holdActivePiece,
+      togglePause,
       gameBoard.gameState,
       settingsOpen,
     ]
@@ -1027,6 +1098,10 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     playerName,
     startGame,
     pauseGame,
+    resumeGame,
+    togglePause,
+    forcePause,
+    forceResume,
     resetGame,
     createRoom,
     handleKeyPress,

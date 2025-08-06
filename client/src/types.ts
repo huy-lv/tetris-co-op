@@ -81,6 +81,9 @@ export interface PlayerLeftData {
 export interface GameStartedData {
   players: Player[];
   startTime: number;
+  startedBy?: string;
+  restartedBy?: string;
+  roomCode?: string;
 }
 
 export interface PlayerGameOverData {
