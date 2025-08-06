@@ -46,7 +46,10 @@ const fireballGlow = keyframes`
   }
 `;
 
-const FireballContainer = styled(Box)<{
+const FireballContainer = styled(Box, {
+  shouldForwardProp: (prop) =>
+    !["startX", "startY", "targetX", "targetY"].includes(prop as string),
+})<{
   targetX: number;
   targetY: number;
   startX: number;
@@ -85,6 +88,8 @@ interface FireballProps {
   startY: number;
   targetX: number;
   targetY: number;
+  targetPlayerId: string;
+  garbageRows: number;
   onComplete?: () => void;
 }
 
@@ -93,15 +98,25 @@ const Fireball: React.FC<FireballProps> = ({
   startY,
   targetX,
   targetY,
+  targetPlayerId,
+  garbageRows,
   onComplete,
 }) => {
   React.useEffect(() => {
     const timer = setTimeout(() => {
+      // Import gameService dynamically to avoid circular dependency
+      import("../services/gameService").then(({ default: gameService }) => {
+        console.log(
+          `💥 Fireball hit! Sending ${garbageRows} garbage rows to player ${targetPlayerId}`
+        );
+        gameService.sendGarbageRows(targetPlayerId, garbageRows);
+      });
+
       onComplete?.();
-    }, 1000); // Match animation duration
+    }, 400); // Match animation duration (0.4s)
 
     return () => clearTimeout(timer);
-  }, [onComplete]);
+  }, [onComplete, targetPlayerId, garbageRows]);
 
   return (
     <FireballContainer

@@ -21,6 +21,7 @@ import {
   clearLines,
   findLinesToClear,
   calculateScore,
+  addGarbageRows,
 } from "../utils/gameUtils";
 import { useBot } from "../bot";
 import { getControlsFromStorage } from "../utils/controlsUtils";
@@ -174,12 +175,23 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       }));
     };
 
+    // Setup event listener for when receiving garbage rows
+    const handleReceiveGarbage = (data: { garbageRows: number }) => {
+      console.log("📦 Receiving garbage rows:", data.garbageRows);
+
+      setGameBoard((prev: GameBoard) => ({
+        ...prev,
+        grid: addGarbageRows(prev.grid, data.garbageRows),
+      }));
+    };
+
     // Assign the event handlers
     gameService.onRoomJoined = handleRoomJoined;
     gameService.onGameStarted = handleGameStarted;
     gameService.onGameRestarted = handleGameRestarted;
     gameService.onGameWinner = handleGameWinner;
     gameService.onGameEnded = handleGameEnded;
+    gameService.onReceiveGarbage = handleReceiveGarbage;
 
     // Also check if we already have a room code (direct URL access case)
     const roomCode = gameService.getRoomCode();
@@ -217,6 +229,9 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       }
       if (gameService.onGameEnded === handleGameEnded) {
         gameService.onGameEnded = undefined;
+      }
+      if (gameService.onReceiveGarbage === handleReceiveGarbage) {
+        gameService.onReceiveGarbage = undefined;
       }
     };
   }, [gameBoard.gameState, playerName]); // Thêm playerName vào dependency

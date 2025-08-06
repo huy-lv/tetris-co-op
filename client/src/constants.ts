@@ -2,8 +2,8 @@ export const GAME_CONFIG = {
   BOARD_WIDTH: 10,
   BOARD_HEIGHT: 20,
   BLOCK_SIZE: 30,
-  INITIAL_SPEED: 500,
-  SPEED_INCREASE: 50,
+  INITIAL_SPEED: 800,
+  SPEED_INCREASE: 40,
   LINES_PER_LEVEL: 10,
 } as const;
 
@@ -109,6 +109,7 @@ export const TETROMINO_SHAPES = {
       [0, 1],
     ],
   ],
+  GARBAGE: [[[1]]], // Simple 1x1 shape for garbage blocks
 } as const;
 
 export const TETROMINO_COLORS = {
@@ -119,6 +120,7 @@ export const TETROMINO_COLORS = {
   Z: "#f00000",
   J: "#0000f0",
   L: "#f0a000",
+  GARBAGE: "#808080", // Gray color for garbage blocks
 } as const;
 
 export const GAME_STATES = {

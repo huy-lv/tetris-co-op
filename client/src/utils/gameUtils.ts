@@ -146,3 +146,31 @@ export const getTetrominoColor = (
   }
   return TETROMINO_COLORS[type];
 };
+
+// Add garbage rows to the bottom of the grid
+export const addGarbageRows = (
+  grid: (TetrominoType | null)[][],
+  numRows: number
+): (TetrominoType | null)[][] => {
+  const newGrid = [...grid];
+
+  // Remove rows from top to make space for garbage rows
+  for (let i = 0; i < numRows; i++) {
+    newGrid.shift();
+  }
+
+  // Create garbage rows
+  for (let i = 0; i < numRows; i++) {
+    const garbageRow: (TetrominoType | null)[] = Array(
+      GAME_CONFIG.BOARD_WIDTH
+    ).fill("GARBAGE" as TetrominoType);
+    // Add one random empty space in each garbage row
+    const emptyIndex = Math.floor(Math.random() * GAME_CONFIG.BOARD_WIDTH);
+    garbageRow[emptyIndex] = null;
+
+    // Add garbage row at bottom
+    newGrid.push(garbageRow);
+  }
+
+  return newGrid;
+};

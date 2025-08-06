@@ -146,6 +146,20 @@ class SimpleGameService {
       this.onGameEnded?.(data);
     });
 
+    this.socket.on(
+      "receive_garbage",
+      (data: {
+        garbageRows: number;
+        fromPlayerId: string;
+        fromPlayerName: string;
+      }) => {
+        console.log(
+          `💥 Received ${data.garbageRows} garbage rows from ${data.fromPlayerName}`
+        );
+        this.onReceiveGarbage?.(data);
+      }
+    );
+
     this.socket.on("error", (data: { message?: string; error?: string }) => {
       console.error("Socket error:", data);
 
@@ -211,6 +225,11 @@ class SimpleGameService {
   onPlayerGameOver?: (data: PlayerGameOverData) => void;
   onGameWinner?: (data: GameWinnerData) => void;
   onGameEnded?: (data: GameEndedData) => void;
+  onReceiveGarbage?: (data: {
+    garbageRows: number;
+    fromPlayerId: string;
+    fromPlayerName: string;
+  }) => void;
 
   // Current room players
   private currentPlayers: string[] = [];
@@ -263,6 +282,19 @@ class SimpleGameService {
   resumeGame(): void {
     if (this.socket && this.roomCode) {
       this.socket.emit("resume_game");
+    }
+  }
+
+  // Send garbage rows to target player
+  sendGarbageRows(targetPlayerId: string, garbageRows: number): void {
+    if (this.socket && this.roomCode) {
+      console.log(
+        `📡 Sending ${garbageRows} garbage rows to player ${targetPlayerId}`
+      );
+      this.socket.emit("send_garbage", {
+        targetPlayerId,
+        garbageRows,
+      });
     }
   }
 

@@ -173,7 +173,12 @@ const RoomPage: React.FC = () => {
         if (positions.length > 0) {
           // Only shoot one fireball to the first player
           const firstTarget = positions[0];
-          fireballEffectRef.current.shootFireball(firstTarget.x, firstTarget.y);
+          fireballEffectRef.current.shootFireball(
+            firstTarget.x,
+            firstTarget.y,
+            firstTarget.playerId,
+            linesCleared
+          );
         }
       }
     }

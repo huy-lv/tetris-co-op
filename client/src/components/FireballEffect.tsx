@@ -7,6 +7,8 @@ interface FireballData {
   startY: number;
   targetX: number;
   targetY: number;
+  targetPlayerId: string;
+  garbageRows: number;
 }
 
 interface FireballEffectProps {
@@ -14,8 +16,16 @@ interface FireballEffectProps {
 }
 
 export interface FireballEffectRef {
-  shootFireball: (targetX: number, targetY: number) => void;
-  shootMultipleFireballs: (targets: { x: number; y: number }[]) => void;
+  shootFireball: (
+    targetX: number,
+    targetY: number,
+    targetPlayerId: string,
+    garbageRows: number
+  ) => void;
+  shootMultipleFireballs: (
+    targets: { x: number; y: number; playerId: string }[],
+    garbageRows: number
+  ) => void;
 }
 
 const FireballEffect = React.forwardRef<FireballEffectRef, FireballEffectProps>(
@@ -23,37 +33,64 @@ const FireballEffect = React.forwardRef<FireballEffectRef, FireballEffectProps>(
     const [fireballs, setFireballs] = useState<FireballData[]>([]);
     const nextIdRef = useRef(0);
 
-    const shootFireball = useCallback((targetX: number, targetY: number) => {
-      // Get game board bottom center as starting point
-      const gameBoard =
-        document.querySelector('[data-testid="game-board"]') ||
-        document.querySelector(".MuiPaper-root"); // Fallback
+    const shootFireball = useCallback(
+      (
+        targetX: number,
+        targetY: number,
+        targetPlayerId: string,
+        garbageRows: number
+      ) => {
+        console.log(`🎯 Shooting fireball to: ${targetX}, ${targetY}`);
 
-      let startX = window.innerWidth / 2;
-      let startY = window.innerHeight / 2;
+        // Get game board bottom center as starting point
+        const gameBoard =
+          document.querySelector('[data-testid="game-board"]') ||
+          document.querySelector('[data-testid="gameboard"]') ||
+          document.querySelector("canvas") ||
+          document.querySelector(".MuiPaper-root");
 
-      if (gameBoard) {
-        const rect = gameBoard.getBoundingClientRect();
-        startX = rect.left + rect.width / 2;
-        startY = rect.bottom - 20; // Start from bottom of game board with small offset
-      }
+        let startX = window.innerWidth / 2;
+        let startY = window.innerHeight / 2;
 
-      const newFireball: FireballData = {
-        id: `fireball-${nextIdRef.current++}`,
-        startX,
-        startY,
-        targetX,
-        targetY,
-      };
+        console.log(`🎮 Game board found:`, gameBoard);
 
-      setFireballs((prev) => [...prev, newFireball]);
-    }, []);
+        if (gameBoard) {
+          const rect = gameBoard.getBoundingClientRect();
+          startX = rect.left + rect.width / 2;
+          startY = rect.bottom - 20; // Start from bottom of game board
+          console.log(`📍 Start position: ${startX}, ${startY}`);
+        } else {
+          console.warn(`❌ Game board not found, using fallback position`);
+        }
+
+        const newFireball: FireballData = {
+          id: `fireball-${nextIdRef.current++}`,
+          startX,
+          startY,
+          targetX,
+          targetY,
+          targetPlayerId,
+          garbageRows,
+        };
+
+        console.log(`🔥 Creating fireball:`, newFireball);
+        setFireballs((prev) => {
+          const updated = [...prev, newFireball];
+          console.log(`🔥 Fireballs array:`, updated);
+          return updated;
+        });
+      },
+      []
+    );
 
     const shootMultipleFireballs = useCallback(
-      (targets: { x: number; y: number }[]) => {
+      (
+        targets: { x: number; y: number; playerId: string }[],
+        garbageRows: number
+      ) => {
         targets.forEach((target, index) => {
           setTimeout(() => {
-            shootFireball(target.x, target.y);
+            shootFireball(target.x, target.y, target.playerId, garbageRows);
           }, index * 150); // Stagger fireball shots by 150ms
         });
       },
@@ -79,6 +116,8 @@ const FireballEffect = React.forwardRef<FireballEffectRef, FireballEffectProps>(
             startY={fireball.startY}
             targetX={fireball.targetX}
             targetY={fireball.targetY}
+            targetPlayerId={fireball.targetPlayerId}
+            garbageRows={fireball.garbageRows}
             onComplete={() => removeFireball(fireball.id)}
           />
         ))}

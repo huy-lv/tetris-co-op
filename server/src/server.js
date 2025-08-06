@@ -402,6 +402,28 @@ io.on("connection", (socket) => {
     });
   });
 
+  // Handle garbage rows attack
+  socket.on("send_garbage", (data) => {
+    const { targetPlayerId, garbageRows } = data;
+    const playerInfo = players.get(socket.id);
+
+    if (!playerInfo) return;
+
+    const room = rooms.get(playerInfo.roomCode);
+    if (!room || !room.isStarted) return;
+
+    console.log(
+      `💥 ${playerInfo.name} sending ${garbageRows} garbage rows to player ${targetPlayerId}`
+    );
+
+    // Send garbage to target player
+    io.to(targetPlayerId).emit("receive_garbage", {
+      garbageRows,
+      fromPlayerId: socket.id,
+      fromPlayerName: playerInfo.name,
+    });
+  });
+
   // Handle disconnect
   socket.on("disconnect", () => {
     console.log(`Player disconnected: ${socket.id}`);
