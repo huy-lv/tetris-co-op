@@ -17,7 +17,7 @@ if (import.meta.env.PROD) {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/tetris">
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <App />
