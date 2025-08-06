@@ -58,6 +58,6 @@ jobs:
           cd out
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add tetris
+          git add tetris 404.html
           git commit -m "Deploy tetris from tetris-coop @${{ github.sha }}" || echo "No changes to commit"
           git push
