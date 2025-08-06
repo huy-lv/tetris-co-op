@@ -1,13 +1,18 @@
 import React from "react";
 import WelcomeScreen from "../components/WelcomeScreen";
-import { useRoomNavigation } from "../hooks/useRoomNavigation";
+import GameAlreadyStartedPopup from "../components/GameAlreadyStartedPopup";
 import { useGameLogic } from "../hooks/useGameLogic";
 import { getStoredPlayerNameOnly } from "../utils/nameGenerator";
 import gameService from "../services/gameService";
 
 const HomePage: React.FC = () => {
-  const { navigateToRoom } = useRoomNavigation();
-  const { createRoom } = useGameLogic(false);
+  const {
+    createRoom,
+    navigateToRoom,
+    showGameStartedPopup,
+    gameStartedRoomCode,
+    closeGameStartedPopup,
+  } = useGameLogic(false);
 
   // Load saved player name from storage (only if exists, no random generation)
   const savedPlayerName = getStoredPlayerNameOnly();
@@ -36,11 +41,20 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <WelcomeScreen
-      onCreateRoom={handleCreateRoom}
-      onJoinRoom={handleJoinRoom}
-      savedPlayerName={savedPlayerName}
-    />
+    <>
+      <WelcomeScreen
+        onCreateRoom={handleCreateRoom}
+        onJoinRoom={handleJoinRoom}
+        savedPlayerName={savedPlayerName}
+      />
+
+      {/* Game Already Started Popup */}
+      <GameAlreadyStartedPopup
+        isOpen={showGameStartedPopup}
+        roomCode={gameStartedRoomCode}
+        onClose={closeGameStartedPopup}
+      />
+    </>
   );
 };
 

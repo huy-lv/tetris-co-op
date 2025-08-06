@@ -1,4 +1,3 @@
-import { getStoredPlayerName, storePlayerName } from "../utils/nameGenerator";
 import { io, Socket } from "socket.io-client";
 import { API_CONFIG } from "../config/api";
 import {
@@ -45,6 +44,104 @@ class SimpleGameService {
       return data.roomCode;
     } catch (error) {
       console.error("Error creating room:", error);
+      throw error;
+    }
+  }
+
+  // Tạo room với roomCode cụ thể
+  async createRoomWithCode(
+    playerName: string,
+    roomCode: string
+  ): Promise<string> {
+    try {
+      const requestBody = {
+        playerName,
+        roomCode: roomCode.toUpperCase(),
+      };
+
+      console.log(`🔧 Creating room with:`, requestBody);
+
+      const response = await fetch(`${this.serverUrl}/api/rooms`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log(`📡 Create room response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error(`❌ Create room error:`, errorData);
+        throw new Error(errorData.error || "Failed to create room");
+      }
+
+      const data = await response.json();
+      this.roomCode = data.roomCode;
+
+      // Chỉ kết nối socket sau khi có phòng
+      await this.connectSocket(playerName);
+
+      return data.roomCode;
+    } catch (error) {
+      console.error("Error creating room with code:", error);
+      throw error;
+    }
+  }
+
+  // Check if room exists
+  async checkRoom(roomCode: string): Promise<{
+    exists: boolean;
+    roomCode: string;
+    isStarted?: boolean;
+    playerCount?: number;
+    maxPlayers?: number;
+    hostName?: string;
+    message?: string;
+    players?: Array<{
+      socketId: string;
+      name: string;
+      isReady: boolean;
+      score: number;
+      lines: number;
+      isGameOver: boolean;
+    }>;
+    hostSocketId?: string;
+  }> {
+    try {
+      const normalizedRoomCode = roomCode.toUpperCase();
+      console.log(`🔍 Checking room: ${normalizedRoomCode}`);
+
+      const response = await fetch(
+        `${this.serverUrl}/api/rooms/${normalizedRoomCode}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      console.log(`📊 Check room response (${response.status}):`, data);
+
+      if (response.status === 404) {
+        console.log(`❌ Room ${normalizedRoomCode} not found`);
+        return {
+          exists: false,
+          roomCode: normalizedRoomCode,
+          message: data.message,
+        };
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to check room");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error checking room:", error);
       throw error;
     }
   }
@@ -164,54 +261,8 @@ class SimpleGameService {
 
     this.socket.on("error", (data: { message?: string; error?: string }) => {
       console.error("Socket error:", data);
-
-      // Nếu room không tồn tại, tự động tạo room mới
-      if (data.message === "Room not found" && this.roomCode) {
-        console.log("Room not found, creating new room...");
-        this.handleRoomNotFound();
-      }
+      this.onError?.(data);
     });
-  }
-
-  // Xử lý trường hợp room không tồn tại
-  private async handleRoomNotFound(): Promise<void> {
-    try {
-      if (!this.roomCode) return;
-
-      // Lấy tên player từ storage hoặc tạo random
-      const playerName = getStoredPlayerName();
-
-      console.log(`Creating room ${this.roomCode} with player: ${playerName}`);
-
-      // Tạo room mới qua API với roomCode hiện tại
-      const response = await fetch(`${this.serverUrl}/api/rooms`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          playerName,
-          roomCode: this.roomCode, // Sử dụng roomCode từ URL
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create room");
-      }
-
-      // Sau khi tạo thành công, join room
-      if (this.socket) {
-        this.socket.emit("join_room", {
-          roomCode: this.roomCode,
-          playerData: { name: playerName },
-        });
-
-        // Lưu tên player vào storage
-        storePlayerName(playerName);
-      }
-    } catch (error) {
-      console.error("Error handling room not found:", error);
-    }
   }
 
   // Callbacks for multiplayer events
@@ -232,6 +283,7 @@ class SimpleGameService {
     fromPlayerId: string;
     fromPlayerName: string;
   }) => void;
+  onError?: (data: { message?: string; error?: string }) => void;
 
   // Current room players
   private currentPlayers: string[] = [];

@@ -20,6 +20,36 @@ import {
 } from "@mui/icons-material";
 import { GAME_STATES } from "../constants";
 
+// Common button styles
+
+const getButtonStyles = {
+  py: 2,
+  fontSize: "1rem",
+  fontWeight: 600,
+  "&:hover": {
+    transform: "translateY(-2px)",
+  },
+  "&:disabled": {
+    background: "rgba(128, 128, 128, 0.3)",
+    color: "rgba(255, 255, 255, 0.3)",
+  },
+  transition: "all 0.3s ease-in-out",
+  mb: 2,
+};
+
+const getOutlinedButtonStyles = {
+  minWidth: "auto",
+  py: 2,
+  fontSize: "1rem",
+  fontWeight: 600,
+  "&:hover": {
+    transform: "translateY(-2px)",
+    boxShadow: "0 8px 25px rgba(100, 100, 100, 0.2)",
+  },
+  transition: "all 0.3s ease-in-out",
+  mb: 2,
+};
+
 interface RoomSidebarProps {
   roomCode: string | null;
   roomId: string | null;
@@ -88,7 +118,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
             color="secondary"
             onClick={onCopyRoomCode}
             startIcon={<CopyIcon />}
-            sx={{ minWidth: "auto", px: 2 }}
+            sx={getOutlinedButtonStyles}
           >
             Copy
           </Button>
@@ -188,19 +218,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
             size="large"
             onClick={onStartGame}
             startIcon={<PlayArrowRounded />}
-            sx={{
-              py: 2,
-              mb: 2,
-              fontSize: "1rem",
-              fontWeight: 600,
-              background: "linear-gradient(45deg, #00c853, #00e676)",
-              "&:hover": {
-                background: "linear-gradient(45deg, #00b248, #00c853)",
-                transform: "translateY(-2px)",
-                boxShadow: "0 8px 25px rgba(0, 200, 83, 0.4)",
-              },
-              transition: "all 0.3s ease-in-out",
-            }}
+            sx={getButtonStyles}
           >
             Start Game
           </Button>
@@ -226,34 +244,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
                 <PauseRounded />
               )
             }
-            sx={{
-              py: 2,
-              fontSize: "1rem",
-              fontWeight: 600,
-              background:
-                gameBoard.gameState === GAME_STATES.PAUSED
-                  ? "linear-gradient(45deg, #00c853, #00e676)"
-                  : "linear-gradient(45deg, #ff8f00, #ffab00)",
-              "&:hover":
-                !gameWinner.hasWinner || gameWinner.winner?.name !== playerName
-                  ? {
-                      background:
-                        gameBoard.gameState === GAME_STATES.PAUSED
-                          ? "linear-gradient(45deg, #00b248, #00c853)"
-                          : "linear-gradient(45deg, #e68900, #ff9500)",
-                      transform: "translateY(-2px)",
-                      boxShadow:
-                        gameBoard.gameState === GAME_STATES.PAUSED
-                          ? "0 8px 25px rgba(0, 200, 83, 0.4)"
-                          : "0 8px 25px rgba(255, 171, 0, 0.4)",
-                    }
-                  : {},
-              "&:disabled": {
-                background: "rgba(128, 128, 128, 0.3)",
-                color: "rgba(255, 255, 255, 0.3)",
-              },
-              transition: "all 0.3s ease-in-out",
-            }}
+            sx={getButtonStyles}
           >
             {gameBoard.gameState === GAME_STATES.PAUSED
               ? "Resume Game"
@@ -266,18 +257,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
           fullWidth
           onClick={onSettingsOpen}
           startIcon={<SettingsRounded />}
-          sx={{
-            py: 1.5,
-            fontSize: "1rem",
-            fontWeight: 600,
-            background: "linear-gradient(45deg, #ff8f00, #ffab00)",
-            "&:hover": {
-              background: "linear-gradient(45deg, #e68900, #ff9500)",
-              transform: "translateY(-2px)",
-              boxShadow: "0 8px 25px rgba(255, 171, 0, 0.4)",
-            },
-            transition: "all 0.3s ease-in-out",
-          }}
+          sx={getButtonStyles}
         >
           Open Settings
         </Button>
@@ -289,17 +269,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
               fullWidth
               onClick={onGoHome}
               startIcon={<HomeRounded />}
-              sx={{
-                py: 1.5,
-                mt: 2,
-                fontSize: "1rem",
-                fontWeight: 600,
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 8px 25px rgba(100, 100, 100, 0.2)",
-                },
-                transition: "all 0.3s ease-in-out",
-              }}
+              sx={getOutlinedButtonStyles}
             >
               Leave Room
             </Button>

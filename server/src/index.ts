@@ -166,13 +166,13 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (room.players.size >= 8) {
-      socket.emit("error", { message: "Room is full (max 8 players)" });
+    if (room.isStarted) {
+      socket.emit("error", { message: "Game already started" });
       return;
     }
 
-    if (room.isStarted) {
-      socket.emit("error", { message: "Game already started" });
+    if (room.players.size >= 8) {
+      socket.emit("error", { message: "Room is full (max 8 players)" });
       return;
     }
 
@@ -342,6 +342,44 @@ io.on("connection", (socket) => {
     });
   });
 
+  // Pause game for all players
+  socket.on("pause_game", () => {
+    const playerInfo = players.get(socket.id);
+    if (!playerInfo) return;
+
+    const room = rooms.get(playerInfo.roomCode);
+    if (!room || !room.isStarted) return;
+
+    console.log(
+      `🔄 Game paused by: ${playerInfo.name} in room: ${playerInfo.roomCode}`
+    );
+
+    // Notify all players in room that game is paused
+    io.to(playerInfo.roomCode).emit("game_paused", {
+      pausedBy: playerInfo.name,
+      roomCode: playerInfo.roomCode,
+    });
+  });
+
+  // Resume game for all players
+  socket.on("resume_game", () => {
+    const playerInfo = players.get(socket.id);
+    if (!playerInfo) return;
+
+    const room = rooms.get(playerInfo.roomCode);
+    if (!room || !room.isStarted) return;
+
+    console.log(
+      `▶️ Game resumed by: ${playerInfo.name} in room: ${playerInfo.roomCode}`
+    );
+
+    // Notify all players in room that game is resumed
+    io.to(playerInfo.roomCode).emit("game_resumed", {
+      resumedBy: playerInfo.name,
+      roomCode: playerInfo.roomCode,
+    });
+  });
+
   // Handle sending garbage to opponents
   socket.on("send_garbage", (data) => {
     const playerInfo = players.get(socket.id);
@@ -412,7 +450,13 @@ app.post("/api/rooms", (req, res) => {
       ? requestedRoomCode.toUpperCase()
       : generateRoomCode();
 
+    console.log(
+      `🔧 Creating room - requested: ${requestedRoomCode}, final: ${roomCode}`
+    );
+    console.log(`📊 Current rooms: ${Array.from(rooms.keys()).join(", ")}`);
+
     if (requestedRoomCode && rooms.has(roomCode)) {
+      console.log(`❌ Room ${roomCode} already exists, returning 409`);
       return res.status(409).json({ error: "Room already exists" });
     }
 
@@ -428,6 +472,88 @@ app.post("/api/rooms", (req, res) => {
   } catch (error) {
     console.error("Error creating room:", error);
     res.status(500).json({ error: "Failed to create room" });
+  }
+});
+
+// Check if room exists
+app.get("/api/rooms/:roomCode", (req, res) => {
+  try {
+    const { roomCode } = req.params;
+
+    if (!roomCode || typeof roomCode !== "string") {
+      return res.status(400).json({ error: "Room code is required" });
+    }
+
+    const normalizedRoomCode = roomCode.toUpperCase();
+    const room = rooms.get(normalizedRoomCode);
+
+    if (!room) {
+      return res.status(404).json({
+        exists: false,
+        roomCode: normalizedRoomCode,
+        message: "Room not found",
+      });
+    }
+
+    // Get players data
+    const playersData = room.getPlayersData();
+
+    res.json({
+      exists: true,
+      roomCode: normalizedRoomCode,
+      isStarted: room.isStarted,
+      playerCount: room.players.size,
+      maxPlayers: 8,
+      hostName: room.hostName,
+      createdAt: room.createdAt,
+      players: playersData,
+      hostSocketId: room.hostSocketId,
+    });
+  } catch (error) {
+    console.error("Error checking room:", error);
+    res.status(500).json({ error: "Failed to check room" });
+  }
+});
+
+// Clear room (development only)
+app.delete("/api/rooms/:roomCode", (req, res) => {
+  try {
+    const { roomCode } = req.params;
+
+    if (!roomCode || typeof roomCode !== "string") {
+      return res.status(400).json({ error: "Room code is required" });
+    }
+
+    const normalizedRoomCode = roomCode.toUpperCase();
+    const room = rooms.get(normalizedRoomCode);
+
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+
+    // Disconnect all players in the room
+    if (room.players.size > 0) {
+      const playerIds = Array.from(room.players.keys());
+      playerIds.forEach((socketId) => {
+        const socket = io.sockets.sockets.get(socketId);
+        if (socket) {
+          socket.leave(normalizedRoomCode);
+        }
+        players.delete(socketId);
+      });
+    }
+
+    // Remove room
+    rooms.delete(normalizedRoomCode);
+    console.log(`🗑️ Room ${normalizedRoomCode} deleted`);
+
+    res.json({
+      message: "Room deleted successfully",
+      roomCode: normalizedRoomCode,
+    });
+  } catch (error) {
+    console.error("Error deleting room:", error);
+    res.status(500).json({ error: "Failed to delete room" });
   }
 });
 

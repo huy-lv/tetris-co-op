@@ -16,7 +16,6 @@ import { HomeRounded, Menu } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { GAME_STATES } from "../constants";
 import { useGameLogic } from "../hooks/useGameLogic";
-import { useRoomNavigation } from "../hooks/useRoomNavigation";
 import { getControlsFromStorage } from "../utils/controlsUtils";
 import GameBoard from "../components/GameBoard";
 import MultiBoard, { MultiBoardRef } from "../components/MultiBoard";
@@ -32,23 +31,15 @@ import PauseOverlay from "../components/PauseOverlay";
 import MobileSidebarPopup from "../components/MobileSidebarPopup";
 import VirtualControls from "../components/VirtualControls";
 import RoomSidebar from "../components/RoomSidebar";
+import GameAlreadyStartedPopup from "../components/GameAlreadyStartedPopup";
 import gameService from "../services/gameService";
-import {
-  MultiplayerGameOverState,
-  RoomJoinedData,
-  PlayerJoinedData,
-  PlayerLeftData,
-  GameStartedData,
-  PlayerGameOverData,
-  Player,
-} from "../types";
+import { MultiplayerGameOverState, PlayerGameOverData } from "../types";
 
 const RoomPage: React.FC = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
-  const [players, setPlayers] = useState<string[]>([]);
   const [multiplayerGameOver, setMultiplayerGameOver] =
     useState<MultiplayerGameOverState>({ isGameOver: false });
   const multiBoardRef = useRef<MultiBoardRef>(null);
@@ -63,11 +54,17 @@ const RoomPage: React.FC = () => {
     togglePause,
     forcePause,
     forceResume,
-    resetGame,
     handleKeyPress,
     handleKeyRelease,
+    // Room navigation
+    roomId,
+    isJoiningRoom,
+    roomError,
+    showGameStartedPopup,
+    gameStartedRoomCode,
+    closeGameStartedPopup,
+    roomPlayers,
   } = useGameLogic(settingsOpen);
-  const { roomId, isJoiningRoom, roomError } = useRoomNavigation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -198,51 +195,9 @@ const RoomPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Mock players list - trong tương lai sẽ lấy từ socket
+  // Setup multiplayer event handlers
   useEffect(() => {
     if (roomCode || roomId) {
-      // Khởi tạo với player hiện tại
-      setPlayers([playerName]);
-
-      // Setup event listeners để cập nhật danh sách players real-time
-      const handleRoomJoined = (data: RoomJoinedData) => {
-        console.log("Room joined event:", data);
-        if (data.players) {
-          setPlayers(data.players.map((p: Player) => p.name));
-        }
-      };
-
-      const handlePlayerJoined = (data: PlayerJoinedData) => {
-        console.log("Player joined event:", data);
-        if (data.players) {
-          setPlayers(data.players.map((p: Player) => p.name));
-        }
-      };
-
-      const handlePlayerLeft = (data: PlayerLeftData) => {
-        console.log("Player left event:", data);
-        if (data.players) {
-          setPlayers(data.players.map((p: Player) => p.name));
-        }
-      };
-
-      const handleGameStarted = (data: GameStartedData) => {
-        console.log("Game started event:", data);
-        if (data.players) {
-          setPlayers(data.players.map((p: Player) => p.name));
-        }
-      };
-
-      const handleGameRestarted = (data: GameStartedData) => {
-        console.log("Game restarted event:", data);
-        if (data.players) {
-          setPlayers(data.players.map((p: Player) => p.name));
-        }
-        // Reset và start lại game
-        resetGame();
-        startGame();
-      };
-
       const handleGamePaused = (data: {
         pausedBy: string;
         roomCode: string;
@@ -282,31 +237,18 @@ const RoomPage: React.FC = () => {
       };
 
       // Gán event listeners
-      gameService.onRoomJoined = handleRoomJoined;
-      gameService.onPlayerJoined = handlePlayerJoined;
-      gameService.onPlayerLeft = handlePlayerLeft;
-      gameService.onGameStarted = handleGameStarted;
-      gameService.onGameRestarted = handleGameRestarted;
       gameService.onGamePaused = handleGamePaused;
       gameService.onGameResumed = handleGameResumed;
       gameService.onPlayerGameOver = handlePlayerGameOver;
-      // Không set handlers cho game_winner và game_ended vì useGameLogic đã quản lý
 
       // Cleanup function
       return () => {
-        gameService.onRoomJoined = undefined;
-        gameService.onPlayerJoined = undefined;
-        gameService.onPlayerLeft = undefined;
-        gameService.onGameStarted = undefined;
-        gameService.onGameRestarted = undefined;
         gameService.onGamePaused = undefined;
         gameService.onGameResumed = undefined;
         gameService.onPlayerGameOver = undefined;
-        gameService.onGameWinner = undefined;
-        gameService.onGameEnded = undefined;
       };
     }
-  }, [roomCode, roomId, playerName]);
+  }, [roomCode, roomId, playerName, forcePause, forceResume]);
 
   const handleSettingsOpen = () => {
     // Pause game when opening settings if game is playing
@@ -566,7 +508,7 @@ const RoomPage: React.FC = () => {
                 onClose={() => setMobileSidebarOpen(false)}
                 roomCode={roomCode}
                 roomId={roomId}
-                players={players}
+                players={roomPlayers}
                 playerName={playerName}
                 gameBoard={gameBoard}
                 gameWinner={gameWinner}
@@ -644,7 +586,7 @@ const RoomPage: React.FC = () => {
               <RoomSidebar
                 roomCode={roomCode}
                 roomId={roomId}
-                players={players}
+                players={roomPlayers}
                 playerName={playerName}
                 gameBoard={gameBoard}
                 gameWinner={gameWinner}
@@ -664,6 +606,13 @@ const RoomPage: React.FC = () => {
 
           {/* Settings Dialog */}
           <SettingsDialog open={settingsOpen} onClose={handleSettingsClose} />
+
+          {/* Game Already Started Popup */}
+          <GameAlreadyStartedPopup
+            isOpen={showGameStartedPopup}
+            roomCode={gameStartedRoomCode}
+            onClose={closeGameStartedPopup}
+          />
         </Container>
       </FireballEffect>
     </Box>

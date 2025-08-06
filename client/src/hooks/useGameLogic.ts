@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   GameBoard,
   Tetromino,
@@ -6,6 +7,8 @@ import {
   TetrominoType,
   GameWinnerState,
   RoomJoinedData,
+  PlayerJoinedData,
+  PlayerLeftData,
   GameStartedData,
   GameWinnerData,
   GameEndedData,
@@ -25,6 +28,7 @@ import {
 } from "../utils/gameUtils";
 import { useBot } from "../bot";
 import { getControlsFromStorage } from "../utils/controlsUtils";
+import { getStoredPlayerName } from "../utils/nameGenerator";
 import gameService from "../services/gameService";
 
 const createInitialGameBoard = (): GameBoard => ({
@@ -45,6 +49,11 @@ const createInitialGameBoard = (): GameBoard => ({
 });
 
 export const useGameLogic = (settingsOpen: boolean = false) => {
+  // Room navigation hooks
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Game states
   const [gameBoard, setGameBoard] = useState<GameBoard>(createInitialGameBoard);
   const [playerName, setPlayerName] = useState<string>(() => {
     // Load player name from localStorage on initialization
@@ -56,19 +65,53 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     finalScores: [],
     totalPlayers: 0,
   });
+
+  // Room navigation states
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+  const [roomError, setRoomError] = useState<string | null>(null);
+  const [showGameStartedPopup, setShowGameStartedPopup] = useState(false);
+  const [gameStartedRoomCode, setGameStartedRoomCode] = useState<string>("");
+  const [roomPlayers, setRoomPlayers] = useState<string[]>([]);
+
+  // Refs
   const gameLoopRef = useRef<number | null>(null);
   const lastDropTimeRef = useRef<number>(0);
   const keysPressed = useRef<Set<string>>(new Set());
   const lastMoveTimeRef = useRef<{ [key: string]: number }>({});
   const shouldSendGridRef = useRef<boolean>(false);
+  const hasAttemptedJoinRef = useRef<string | null>(null);
+
+  const roomId = searchParams.get("id");
+
+  // Navigate to room URL
+  const navigateToRoom = useCallback(
+    (roomCode: string) => {
+      navigate(`/room?id=${roomCode}`);
+    },
+    [navigate]
+  );
+
+  // Close game started popup
+  const closeGameStartedPopup = useCallback(() => {
+    setShowGameStartedPopup(false);
+    setGameStartedRoomCode("");
+  }, []);
 
   // Listen for successful room join to transition from WELCOME to WAITING
   useEffect(() => {
     // Setup event listener for successful room join
-    const handleRoomJoined = (_data: RoomJoinedData) => {
+    const handleRoomJoined = (data: RoomJoinedData) => {
       console.log(
         "🎮 Room joined successfully, transitioning to WAITING state"
       );
+
+      // Update players list from room_joined event
+      if (data.players) {
+        const playerNames = data.players.map((p) => p.name);
+        console.log(`👥 Updated players list: ${playerNames.join(", ")}`);
+        setRoomPlayers(playerNames);
+      }
+
       setGameBoard((prev: GameBoard) => ({
         ...prev,
         gameState: GAME_STATES.WAITING,
@@ -130,6 +173,34 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       lastDropTimeRef.current = Date.now();
     };
 
+    // Setup event listener for player joined
+    const handlePlayerJoined = (data: PlayerJoinedData) => {
+      console.log("🎮 Player joined:", data);
+
+      // Update players list from player_joined event
+      if (data.players) {
+        const playerNames = data.players.map((p) => p.name);
+        console.log(
+          `👥 Updated players list after join: ${playerNames.join(", ")}`
+        );
+        setRoomPlayers(playerNames);
+      }
+    };
+
+    // Setup event listener for player left
+    const handlePlayerLeft = (data: PlayerLeftData) => {
+      console.log("🎮 Player left:", data);
+
+      // Update players list from player_left event
+      if (data.players) {
+        const playerNames = data.players.map((p) => p.name);
+        console.log(
+          `👥 Updated players list after leave: ${playerNames.join(", ")}`
+        );
+        setRoomPlayers(playerNames);
+      }
+    };
+
     // Setup event listener for when someone wins
     const handleGameWinner = (data: GameWinnerData) => {
       console.log("🎮 Game winner detected, stopping game:", data);
@@ -187,6 +258,8 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
 
     // Assign the event handlers
     gameService.onRoomJoined = handleRoomJoined;
+    gameService.onPlayerJoined = handlePlayerJoined;
+    gameService.onPlayerLeft = handlePlayerLeft;
     gameService.onGameStarted = handleGameStarted;
     gameService.onGameRestarted = handleGameRestarted;
     gameService.onGameWinner = handleGameWinner;
@@ -217,6 +290,12 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     return () => {
       if (gameService.onRoomJoined === handleRoomJoined) {
         gameService.onRoomJoined = undefined;
+      }
+      if (gameService.onPlayerJoined === handlePlayerJoined) {
+        gameService.onPlayerJoined = undefined;
+      }
+      if (gameService.onPlayerLeft === handlePlayerLeft) {
+        gameService.onPlayerLeft = undefined;
       }
       if (gameService.onGameStarted === handleGameStarted) {
         gameService.onGameStarted = undefined;
@@ -843,6 +922,13 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     setGameBoard(createInitialGameBoard());
   }, []);
 
+  const setWaitingState = useCallback(() => {
+    setGameBoard((prev: GameBoard) => ({
+      ...prev,
+      gameState: GAME_STATES.WAITING,
+    }));
+  }, []);
+
   const createRoom = useCallback(async (name: string) => {
     // Save player name to localStorage
     localStorage.setItem("tetris_player_name", name);
@@ -1132,6 +1218,118 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     gameBoard.grid,
   ]);
 
+  // Auto join room from URL
+  useEffect(() => {
+    const autoJoinRoom = async () => {
+      if (
+        roomId &&
+        !gameService.getRoomCode() &&
+        hasAttemptedJoinRef.current !== roomId
+      ) {
+        hasAttemptedJoinRef.current = roomId;
+        // Nếu có roomId trong URL nhưng chưa join room
+        const savedPlayerName = getStoredPlayerName(); // Sử dụng utility function
+
+        setIsJoiningRoom(true);
+        setRoomError(null);
+
+        // Setup event handlers
+        gameService.onError = (data) => {
+          console.error("Socket error:", data);
+          setRoomError(data.message || "Unknown error");
+          setIsJoiningRoom(false);
+        };
+
+        try {
+          // Kiểm tra room trước khi join
+          console.log(`🔍 Checking room: ${roomId}`);
+          const roomStatus = await gameService.checkRoom(roomId);
+
+          if (!roomStatus.exists) {
+            // Room không tồn tại, thử tạo room mới với roomCode từ URL
+            console.log(`🏗️ Room ${roomId} not found, attempting to create...`);
+
+            // Reset players list cho room mới
+            setRoomPlayers([]);
+
+            try {
+              await gameService.createRoomWithCode(savedPlayerName, roomId);
+              console.log(`✅ Room ${roomId} created successfully`);
+              // Room đã được tạo với roomCode mong muốn, bây giờ join
+              await gameService.joinRoom(roomId, savedPlayerName);
+            } catch (createError: any) {
+              // Nếu tạo room thất bại (409 - room đã được tạo bởi người khác), thử join
+              if (
+                createError.message?.includes("already exists") ||
+                createError.message?.includes("Room already exists")
+              ) {
+                console.log(
+                  `🔄 Room ${roomId} was created by another user during our attempt, trying to join...`
+                );
+                // Kiểm tra lại trạng thái room trước khi join
+                const updatedRoomStatus = await gameService.checkRoom(roomId);
+                if (updatedRoomStatus.isStarted) {
+                  console.log(
+                    `⚠️ Room ${roomId} started while we were creating, showing popup`
+                  );
+                  setShowGameStartedPopup(true);
+                  setGameStartedRoomCode(roomId);
+                  setIsJoiningRoom(false);
+                  return;
+                }
+                await gameService.joinRoom(roomId, savedPlayerName);
+              } else {
+                throw createError;
+              }
+            }
+          } else if (roomStatus.isStarted) {
+            // Room đã bắt đầu, hiện popup
+            console.log(`⚠️ Room ${roomId} already started`);
+            setShowGameStartedPopup(true);
+            setGameStartedRoomCode(roomId);
+            setIsJoiningRoom(false);
+            return;
+          } else {
+            // Room tồn tại và chưa bắt đầu, join bình thường
+            console.log(`✅ Room ${roomId} exists and available, joining...`);
+
+            // Lưu thông tin players hiện tại trước khi join
+            if (roomStatus.players) {
+              const playerNames = roomStatus.players.map((p) => p.name);
+              console.log(
+                `👥 Current players in room: ${playerNames.join(", ")}`
+              );
+              setRoomPlayers(playerNames);
+            }
+
+            await gameService.joinRoom(roomId, savedPlayerName);
+          }
+
+          console.log(
+            `🚪 Successfully joined room: ${roomId} with player: ${savedPlayerName}`
+          );
+
+          // Set game state to WAITING after successful join
+          setGameBoard((prev: GameBoard) => ({
+            ...prev,
+            gameState: GAME_STATES.WAITING,
+          }));
+
+          console.log("✅ Room join completed, game state set to WAITING");
+        } catch (error) {
+          console.error("Failed to auto-join room:", error);
+          setRoomError(`Failed to join room ${roomId}`);
+          // Navigate back to home on error
+          navigate("/");
+        } finally {
+          setIsJoiningRoom(false);
+        }
+      }
+    };
+
+    autoJoinRoom();
+  }, [roomId, navigate]);
+
   return {
     gameBoard,
     gameWinner,
@@ -1143,10 +1341,20 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     forcePause,
     forceResume,
     resetGame,
+    setWaitingState,
     createRoom,
     handleKeyPress,
     handleKeyRelease,
     holdActivePiece,
     bot,
+    // Room navigation functions
+    roomId,
+    navigateToRoom,
+    isJoiningRoom,
+    roomError,
+    showGameStartedPopup,
+    gameStartedRoomCode,
+    closeGameStartedPopup,
+    roomPlayers,
   };
 };
