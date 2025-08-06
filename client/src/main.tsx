@@ -7,6 +7,14 @@ import App from "./App.tsx";
 import { theme } from "./theme";
 import "./index.css";
 
+// Production config - disable console.log in production
+if (import.meta.env.PROD) {
+  console.log = () => {};
+  console.info = () => {};
+  console.warn = () => {};
+  // Keep console.error for debugging critical issues
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>

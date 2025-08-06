@@ -3,6 +3,14 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 
+// Production config - disable console.log in production
+if (process.env.NODE_ENV === "production") {
+  console.log = () => {};
+  console.info = () => {};
+  console.warn = () => {};
+  // Keep console.error for debugging critical issues
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
