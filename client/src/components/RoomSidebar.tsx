@@ -192,7 +192,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
             sx={{
               py: 2,
               mb: 2,
-              fontSize: "1.2rem",
+              fontSize: "1rem",
               fontWeight: 600,
               background: "linear-gradient(45deg, #00c853, #00e676)",
               "&:hover": {
@@ -229,7 +229,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
             }
             sx={{
               py: 2,
-              fontSize: "1.2rem",
+              fontSize: "1rem",
               fontWeight: 600,
               background:
                 gameBoard.gameState === GAME_STATES.PAUSED
@@ -261,50 +261,6 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
               : "Pause Game"}
           </Button>
         )}
-
-        {/* Leave Room Button - Chỉ hiển thị khi không đang chơi game */}
-        {gameBoard.gameState !== GAME_STATES.PLAYING &&
-          gameBoard.gameState !== GAME_STATES.PAUSED && (
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={onGoHome}
-              startIcon={<HomeRounded />}
-              sx={{
-                py: 1.5,
-                fontSize: "1rem",
-                fontWeight: 600,
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 8px 25px rgba(100, 100, 100, 0.2)",
-                },
-                transition: "all 0.3s ease-in-out",
-              }}
-            >
-              Leave Room
-            </Button>
-          )}
-      </Paper>
-
-      {/* Settings Button */}
-      <Paper
-        elevation={4}
-        sx={{
-          p: 3,
-          background: "rgba(26, 26, 26, 0.9)",
-          border: "1px solid rgba(255, 170, 0, 0.2)",
-        }}
-      >
-        <Typography
-          variant="h6"
-          component="h4"
-          textAlign="center"
-          color="warning.light"
-          gutterBottom
-        >
-          ⚙️ Settings
-        </Typography>
-
         <Button
           variant="contained"
           color="warning"
@@ -326,6 +282,29 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
         >
           Open Settings
         </Button>
+        {/* Leave Room Button - Chỉ hiển thị khi không đang chơi game */}
+        {gameBoard.gameState !== GAME_STATES.PLAYING &&
+          gameBoard.gameState !== GAME_STATES.PAUSED && (
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={onGoHome}
+              startIcon={<HomeRounded />}
+              sx={{
+                py: 1.5,
+                mt: 2,
+                fontSize: "1rem",
+                fontWeight: 600,
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 8px 25px rgba(100, 100, 100, 0.2)",
+                },
+                transition: "all 0.3s ease-in-out",
+              }}
+            >
+              Leave Room
+            </Button>
+          )}
       </Paper>
     </Stack>
   );
