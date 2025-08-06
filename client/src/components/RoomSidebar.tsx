@@ -5,19 +5,18 @@ import {
   Typography,
   Box,
   Button,
-  Chip,
   List,
   ListItem,
   ListItemText,
   Avatar,
 } from "@mui/material";
 import {
-  ContentCopy as CopyIcon,
   PlayArrowRounded,
   PauseRounded,
   HomeRounded,
   SettingsRounded,
 } from "@mui/icons-material";
+import RoomCodeDisplay from "./RoomCodeDisplay";
 import { GAME_STATES } from "../constants";
 
 // Common button styles
@@ -52,7 +51,6 @@ const getOutlinedButtonStyles = {
 
 interface RoomSidebarProps {
   roomCode: string | null;
-  roomId: string | null;
   players: string[];
   playerName: string;
   gameBoard: {
@@ -62,7 +60,6 @@ interface RoomSidebarProps {
     hasWinner: boolean;
     winner?: { name: string } | null;
   };
-  onCopyRoomCode: () => void;
   onStartGame: () => void;
   onPauseGame: () => void;
   onGoHome: () => void;
@@ -71,12 +68,10 @@ interface RoomSidebarProps {
 
 const RoomSidebar: React.FC<RoomSidebarProps> = ({
   roomCode,
-  roomId,
   players,
   playerName,
   gameBoard,
   gameWinner,
-  onCopyRoomCode,
   onStartGame,
   onPauseGame,
   onGoHome,
@@ -93,36 +88,7 @@ const RoomSidebar: React.FC<RoomSidebarProps> = ({
           border: "1px solid rgba(156, 39, 176, 0.3)",
         }}
       >
-        <Typography
-          variant="h6"
-          component="h4"
-          textAlign="center"
-          color="secondary.light"
-          gutterBottom
-        >
-          🏠 Room Code
-        </Typography>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-          <Chip
-            label={roomCode || roomId || "Loading..."}
-            color="secondary"
-            sx={{
-              fontSize: "1.2rem",
-              fontWeight: "bold",
-              flexGrow: 1,
-              height: 40,
-            }}
-          />
-          <Button
-            variant="outlined"
-            color="secondary"
-            onClick={onCopyRoomCode}
-            startIcon={<CopyIcon />}
-            sx={getOutlinedButtonStyles}
-          >
-            Copy
-          </Button>
-        </Box>
+        <RoomCodeDisplay roomCode={roomCode} />
 
         {/* Players List */}
         <Box sx={{ mt: 2 }}>

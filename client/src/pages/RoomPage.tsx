@@ -39,7 +39,7 @@ const RoomPage: React.FC = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [roomCode, setRoomCode] = useState<string | null>(null);
+
   const [multiplayerGameOver, setMultiplayerGameOver] =
     useState<MultiplayerGameOverState>({ isGameOver: false });
   const multiBoardRef = useRef<MultiBoardRef>(null);
@@ -57,7 +57,7 @@ const RoomPage: React.FC = () => {
     handleKeyPress,
     handleKeyRelease,
     // Room navigation
-    roomId,
+    roomCode,
     isJoiningRoom,
     roomError,
     showGameStartedPopup,
@@ -183,21 +183,9 @@ const RoomPage: React.FC = () => {
     lastLinesRef.current = currentLines;
   }, [gameBoard.lines]);
 
-  // Check room code from gameService
-  useEffect(() => {
-    const checkRoomCode = () => {
-      const currentRoomCode = gameService.getRoomCode();
-      setRoomCode(currentRoomCode);
-    };
-
-    checkRoomCode();
-    const interval = setInterval(checkRoomCode, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   // Setup multiplayer event handlers
   useEffect(() => {
-    if (roomCode || roomId) {
+    if (roomCode) {
       const handleGamePaused = (data: {
         pausedBy: string;
         roomCode: string;
@@ -248,7 +236,7 @@ const RoomPage: React.FC = () => {
         gameService.onPlayerGameOver = undefined;
       };
     }
-  }, [roomCode, roomId, playerName, forcePause, forceResume]);
+  }, [roomCode, playerName, forcePause, forceResume]);
 
   const handleSettingsOpen = () => {
     // Pause game when opening settings if game is playing
@@ -260,16 +248,6 @@ const RoomPage: React.FC = () => {
 
   const handleSettingsClose = () => {
     setSettingsOpen(false);
-  };
-
-  const handleCopyRoomCode = async () => {
-    const currentUrl = window.location.href;
-    try {
-      await navigator.clipboard.writeText(currentUrl);
-      console.log("URL copied:", currentUrl);
-    } catch (error) {
-      console.error("Failed to copy URL:", error);
-    }
   };
 
   const handleGoHome = () => {
@@ -301,7 +279,7 @@ const RoomPage: React.FC = () => {
         >
           <CircularProgress sx={{ mb: 2 }} />
           <Typography variant="h5" color="primary">
-            Joining Room {roomId}...
+            Joining Room {roomCode}...
           </Typography>
         </Paper>
       </Box>
@@ -507,12 +485,10 @@ const RoomPage: React.FC = () => {
                 open={mobileSidebarOpen}
                 onClose={() => setMobileSidebarOpen(false)}
                 roomCode={roomCode}
-                roomId={roomId}
                 players={roomPlayers}
                 playerName={playerName}
                 gameBoard={gameBoard}
                 gameWinner={gameWinner}
-                onCopyRoomCode={handleCopyRoomCode}
                 onStartGame={startGame}
                 onPauseGame={pauseGame}
                 onGoHome={handleGoHome}
@@ -585,12 +561,10 @@ const RoomPage: React.FC = () => {
               {/* Right Side: Toolbar */}
               <RoomSidebar
                 roomCode={roomCode}
-                roomId={roomId}
                 players={roomPlayers}
                 playerName={playerName}
                 gameBoard={gameBoard}
                 gameWinner={gameWinner}
-                onCopyRoomCode={handleCopyRoomCode}
                 onStartGame={startGame}
                 onPauseGame={togglePause}
                 onGoHome={handleGoHome}

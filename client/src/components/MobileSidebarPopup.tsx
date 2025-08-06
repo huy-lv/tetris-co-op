@@ -13,14 +13,8 @@ import {
   Divider,
   Stack,
 } from "@mui/material";
-import {
-  Close,
-  ContentCopy,
-  PlayArrow,
-  Pause,
-  Home,
-  Settings,
-} from "@mui/icons-material";
+import { Close, PlayArrow, Pause, Home, Settings } from "@mui/icons-material";
+import RoomCodeDisplay from "./RoomCodeDisplay";
 import { GAME_STATES } from "../constants";
 import { GameBoard as GameBoardType, GameWinnerState } from "../types";
 
@@ -28,12 +22,10 @@ interface MobileSidebarPopupProps {
   open: boolean;
   onClose: () => void;
   roomCode: string | null;
-  roomId: string | null;
   players: string[];
   playerName: string;
   gameBoard: GameBoardType;
   gameWinner: GameWinnerState;
-  onCopyRoomCode: () => void;
   onStartGame: () => void;
   onPauseGame: () => void;
   onGoHome: () => void;
@@ -44,18 +36,16 @@ const MobileSidebarPopup: React.FC<MobileSidebarPopupProps> = ({
   open,
   onClose,
   roomCode,
-  roomId,
   players,
   playerName,
   gameBoard,
   gameWinner,
-  onCopyRoomCode,
   onStartGame,
   onPauseGame,
   onGoHome,
   onSettingsOpen,
 }) => {
-  const codeToShare = roomCode || roomId;
+  const codeToShare = roomCode;
   const canStartGame = gameBoard.gameState === GAME_STATES.WAITING;
   const canPauseGame =
     gameBoard.gameState === GAME_STATES.PLAYING && !gameWinner.hasWinner;
@@ -115,29 +105,11 @@ const MobileSidebarPopup: React.FC<MobileSidebarPopupProps> = ({
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Room Code
               </Typography>
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <Typography
-                  variant="h6"
-                  color="primary"
-                  sx={{ fontFamily: "monospace" }}
-                >
-                  {codeToShare}
-                </Typography>
-                <IconButton
-                  onClick={onCopyRoomCode}
-                  size="small"
-                  sx={{
-                    color: "primary.main",
-                    "&:hover": { background: "rgba(0, 170, 255, 0.1)" },
-                  }}
-                >
-                  <ContentCopy />
-                </IconButton>
-              </Box>
+              <RoomCodeDisplay
+                roomCode={codeToShare}
+                height={45}
+                fontSize="1.1rem"
+              />
             </Box>
           </Box>
 
