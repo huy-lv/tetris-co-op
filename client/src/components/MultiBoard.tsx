@@ -85,10 +85,47 @@ interface PlayerBoard {
   isGameOver: boolean;
 }
 
-const MultiBoard: React.FC = () => {
+export interface MultiBoardRef {
+  getPlayerBoardPositions: () => { x: number; y: number; playerId: string }[];
+}
+
+const MultiBoard = React.forwardRef<MultiBoardRef>((_, ref) => {
   const [playerBoards, setPlayerBoards] = useState<Map<string, PlayerBoard>>(
     new Map()
   );
+
+  React.useImperativeHandle(ref, () => ({
+    getPlayerBoardPositions: () => {
+      const positions: { x: number; y: number; playerId: string }[] = [];
+      const boards = document.querySelectorAll("[data-player-id]");
+
+      console.log(`🎯 Found ${boards.length} player boards`);
+
+      boards.forEach((board) => {
+        const playerId = board.getAttribute("data-player-id");
+        if (playerId) {
+          const rect = board.getBoundingClientRect();
+          console.log(`📍 Player ${playerId} board rect:`, {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+            bottom: rect.bottom,
+            right: rect.right,
+          });
+
+          positions.push({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+            playerId,
+          });
+        }
+      });
+
+      console.log(`🎯 Final positions:`, positions);
+      return positions;
+    },
+  }));
 
   useEffect(() => {
     const handlePlayerStateUpdated = (data: PlayerStateUpdatedData) => {
@@ -137,7 +174,10 @@ const MultiBoard: React.FC = () => {
   return (
     <Container>
       {boardsArray.map((board) => (
-        <PlayerBoardContainer key={board.playerId}>
+        <PlayerBoardContainer
+          key={board.playerId}
+          data-player-id={board.playerId}
+        >
           <PlayerName>
             {board.playerName}
             {board.isGameOver && " (Game Over)"}
@@ -167,6 +207,8 @@ const MultiBoard: React.FC = () => {
       ))}
     </Container>
   );
-};
+});
+
+MultiBoard.displayName = "MultiBoard";
 
 export default MultiBoard;
