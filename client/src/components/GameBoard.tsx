@@ -3,7 +3,7 @@ import { Box, Paper, useTheme, useMediaQuery } from "@mui/material";
 import { keyframes } from "@emotion/react";
 import { Tetromino, TetrominoType } from "../types";
 import { GAME_CONFIG } from "../constants";
-import { getTetrominoColor } from "../utils/gameUtils";
+import GameCell from "./GameCell";
 
 interface GameBoardProps {
   grid: (TetrominoType | null)[][];
@@ -20,49 +20,6 @@ const blockGlow = keyframes`
   }
   50% {
      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-  }
-`;
-
-const explosionAnimation = keyframes`
-  0% {
-    transform: scale(1);
-    opacity: 1;
-    background: linear-gradient(45deg, #ff6b35, #f7931e);
-    box-shadow: 
-      0 0 10px rgba(255, 107, 53, 0.8),
-      inset 0 0 5px rgba(255, 255, 255, 0.3);
-  }
-  25% {
-    transform: scale(1.2);
-    opacity: 0.9;
-    background: linear-gradient(45deg, #ff4757, #ffa502);
-    box-shadow: 
-      0 0 20px rgba(255, 71, 87, 0.9),
-      inset 0 0 10px rgba(255, 255, 255, 0.5);
-  }
-  50% {
-    transform: scale(1.4);
-    opacity: 0.7;
-    background: linear-gradient(45deg, #ff3742, #ff6348);
-    box-shadow: 
-      0 0 30px rgba(255, 55, 66, 1),
-      inset 0 0 15px rgba(255, 255, 255, 0.7);
-  }
-  75% {
-    transform: scale(1.6);
-    opacity: 0.4;
-    background: linear-gradient(45deg, #ff2d92, #ff6b9d);
-    box-shadow: 
-      0 0 40px rgba(255, 45, 146, 0.8),
-      inset 0 0 20px rgba(255, 255, 255, 0.4);
-  }
-  100% {
-    transform: scale(1.8);
-    opacity: 0;
-    background: linear-gradient(45deg, #c44569, #f8b500);
-    box-shadow: 
-      0 0 50px rgba(196, 69, 105, 0.3),
-      inset 0 0 25px rgba(255, 255, 255, 0.1);
   }
 `;
 
@@ -160,54 +117,13 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
           }
 
           return (
-            <Box
+            <GameCell
               key={`${y}-${x}`}
-              sx={{
-                width: blockSize,
-                height: blockSize,
-                backgroundColor: finalCell
-                  ? getTetrominoColor(finalCell, isGhost)
-                  : "rgba(0, 0, 0, 0.4)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                position: "relative",
-                animation: isClearing
-                  ? `${explosionAnimation} 0.2s ease-in-out forwards`
-                  : finalCell && !isGhost
-                  ? `${blockGlow} 2s ease-in-out infinite`
-                  : "none",
-                animationDelay: isClearing ? `${animationDelay}s` : "none",
-                zIndex: isClearing ? 10 : 1,
-                "&::before":
-                  finalCell && !isGhost
-                    ? {
-                        content: '""',
-                        position: "absolute",
-                        top: 1,
-                        left: 1,
-                        right: 1,
-                        bottom: 1,
-                        background:
-                          "linear-gradient(135deg, rgba(255, 255, 255, 0.3), transparent)",
-                        borderRadius: "2px",
-                        pointerEvents: "none",
-                      }
-                    : {},
-                "&::after":
-                  finalCell && !isGhost
-                    ? {
-                        content: '""',
-                        position: "absolute",
-                        bottom: 1,
-                        right: 1,
-                        width: "60%",
-                        height: "60%",
-                        background:
-                          "linear-gradient(135deg, transparent, rgba(0, 0, 0, 0.2))",
-                        borderRadius: "2px",
-                        pointerEvents: "none",
-                      }
-                    : {},
-              }}
+              cellType={finalCell || null}
+              blockSize={blockSize}
+              isGhost={isGhost}
+              isClearing={isClearing}
+              animationDelay={animationDelay}
             />
           );
         })}
