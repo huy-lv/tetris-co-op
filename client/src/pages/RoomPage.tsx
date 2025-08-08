@@ -425,7 +425,7 @@ const RoomPage: React.FC = () => {
                     score={gameBoard.score}
                     lines={gameBoard.lines}
                     level={gameBoard.level}
-                    onPlayAgain={() => gameService.restartGame()}
+                    onPlayAgain={startGame}
                     onLeaveRoom={handleGoHome}
                   />
 
@@ -532,7 +532,7 @@ const RoomPage: React.FC = () => {
                   score={gameBoard.score}
                   lines={gameBoard.lines}
                   level={gameBoard.level}
-                  onPlayAgain={() => gameService.restartGame()}
+                  onPlayAgain={startGame}
                   onLeaveRoom={handleGoHome}
                 />
 

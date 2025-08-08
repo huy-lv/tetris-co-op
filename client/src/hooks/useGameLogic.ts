@@ -341,7 +341,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   useEffect(() => {
     if (
       gameBoard.gameState === GAME_STATES.GAME_OVER &&
-      gameService.isMultiplayer()
+      gameService.isConnected()
     ) {
       shouldSendGridRef.current = true;
 
@@ -1224,8 +1224,8 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
         isGameOver: gameBoard.gameState === GAME_STATES.GAME_OVER,
       };
 
-      // Chỉ sync khi có multiplayer connection
-      if (gameService.isMultiplayer()) {
+      // Sync khi đang kết nối socket (kể cả chỉ 1 người trong phòng)
+      if (gameService.isConnected()) {
         gameService.updateGameState(gameState);
       }
 
