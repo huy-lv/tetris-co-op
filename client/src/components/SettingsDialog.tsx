@@ -236,14 +236,21 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
       onClose={handleClose}
       maxWidth="md"
       disableEscapeKeyDown={false}
-      PaperProps={{
-        sx: {
-          background: "rgba(26, 26, 26, 0.95)",
-          backdropFilter: "blur(10px)",
-          border: "1px solid rgba(0, 170, 255, 0.3)",
-          borderRadius: 3,
-          minWidth: "500px",
-          position: "relative",
+      sx={{ zIndex: 5000 }}
+      slotProps={{
+        paper: {
+          sx: {
+            background: "rgba(26, 26, 26, 0.95)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(0, 170, 255, 0.3)",
+            borderRadius: 3,
+            minWidth: "500px",
+            position: "relative",
+            zIndex: 5001,
+          },
+        },
+        backdrop: {
+          sx: { zIndex: 5000 },
         },
       }}
     >

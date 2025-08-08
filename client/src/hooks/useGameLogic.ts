@@ -1221,15 +1221,48 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
       gameBoard.gameState === GAME_STATES.PLAYING ||
       gameBoard.gameState === GAME_STATES.GAME_OVER
     ) {
+      // Tạo grid overlay với activePiece hiện tại để người khác thấy quân đang rơi
+      let gridForBroadcast: (TetrominoType | null)[][] | undefined = undefined;
+      if (gameService.isConnected()) {
+        const baseGrid = gameBoard.grid;
+        const activePiece = gameBoard.activePiece;
+        const gridCopy: (TetrominoType | null)[][] = baseGrid.map((row) => [
+          ...row,
+        ]);
+
+        if (activePiece) {
+          const shape = activePiece.shape;
+          for (let y = 0; y < shape.length; y += 1) {
+            for (let x = 0; x < shape[y].length; x += 1) {
+              if (shape[y][x]) {
+                const gx = activePiece.position.x + x;
+                const gy = activePiece.position.y + y;
+                if (
+                  gy >= 0 &&
+                  gy < gridCopy.length &&
+                  gx >= 0 &&
+                  gx < gridCopy[0].length
+                ) {
+                  gridCopy[gy][gx] = activePiece.type;
+                }
+              }
+            }
+          }
+        }
+
+        // Chỉ gửi grid đầy đủ khi có request gửi grid hoặc có activePiece (hiển thị liên tục)
+        gridForBroadcast =
+          shouldSendGridRef.current || activePiece ? gridCopy : undefined;
+      }
+
       const gameState = {
-        grid: shouldSendGridRef.current ? gameBoard.grid : undefined,
+        grid: gridForBroadcast,
         score: gameBoard.score,
         lines: gameBoard.lines,
         level: gameBoard.level,
         isGameOver: gameBoard.gameState === GAME_STATES.GAME_OVER,
       };
 
-      // Sync khi đang kết nối socket (kể cả chỉ 1 người trong phòng)
       if (gameService.isConnected()) {
         gameService.updateGameState(gameState);
       }
@@ -1243,6 +1276,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     gameBoard.level,
     gameBoard.gameState,
     gameBoard.grid,
+    gameBoard.activePiece,
   ]);
 
   const autoJoinRoom = async (roomCode: string) => {

@@ -11,6 +11,7 @@ import {
   CircularProgress,
   Alert,
   Fab,
+  IconButton,
 } from "@mui/material";
 import { HomeRounded, Menu } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -39,6 +40,7 @@ import PlayerNameDialog from "../components/PlayerNameDialog";
 const RoomPage: React.FC = () => {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  console.log("🚀 ~ RoomPage ~ settingsOpen:", settingsOpen);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [multiplayerGameOver, setMultiplayerGameOver] =
@@ -258,6 +260,11 @@ const RoomPage: React.FC = () => {
     navigate("/");
   };
 
+  const handleStartGameAndClosePopup = () => {
+    startGame();
+    setMobileSidebarOpen(false);
+  };
+
   // Show loading while joining room
   if (isJoiningRoom) {
     return (
@@ -445,43 +452,64 @@ const RoomPage: React.FC = () => {
                 </Box>
               </Box>
 
-              {/* Mobile Menu Button */}
-              <Fab
-                color="primary"
-                onClick={() => setMobileSidebarOpen(true)}
+              {/* Virtual Controls Container with Menu Button */}
+              <Box
                 sx={{
                   position: "fixed",
-                  bottom: 220, // Position above floating virtual controls
-                  right: 16,
-                  zIndex: 1000,
+                  bottom: 8,
+                  left: 8,
+                  right: 8,
+                  zIndex: 1250,
                 }}
               >
-                <Menu />
-              </Fab>
+                {/* Menu Button - Above Virtual Controls */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    mb: 2.5, // 20px margin bottom
+                  }}
+                >
+                  <IconButton
+                    onClick={() => setMobileSidebarOpen(true)}
+                    sx={{
+                      backgroundColor: "primary.main",
+                      color: "white",
+                      "&:hover": {
+                        backgroundColor: "primary.dark",
+                      },
+                      width: 56,
+                      height: 56,
+                    }}
+                  >
+                    <Menu />
+                  </IconButton>
+                </Box>
 
-              {/* Virtual Controls - Only on Mobile */}
-              <VirtualControls
-                onMoveLeft={() => handleVirtualControl("moveLeft")}
-                onMoveRight={() => handleVirtualControl("moveRight")}
-                onMoveDown={() => handleVirtualControl("softDrop")}
-                onRotate={() => handleVirtualControl("rotate")}
-                onHardDrop={() => handleVirtualControl("hardDrop")}
-                onHold={() => handleVirtualControl("hold")}
-                onMoveLeftRelease={() =>
-                  handleVirtualControlRelease("moveLeft")
-                }
-                onMoveRightRelease={() =>
-                  handleVirtualControlRelease("moveRight")
-                }
-                onMoveDownRelease={() =>
-                  handleVirtualControlRelease("softDrop")
-                }
-                onRotateRelease={() => handleVirtualControlRelease("rotate")}
-                onHardDropRelease={() =>
-                  handleVirtualControlRelease("hardDrop")
-                }
-                onHoldRelease={() => handleVirtualControlRelease("hold")}
-              />
+                {/* Virtual Controls */}
+                <VirtualControls
+                  onMoveLeft={() => handleVirtualControl("moveLeft")}
+                  onMoveRight={() => handleVirtualControl("moveRight")}
+                  onMoveDown={() => handleVirtualControl("softDrop")}
+                  onRotate={() => handleVirtualControl("rotate")}
+                  onHardDrop={() => handleVirtualControl("hardDrop")}
+                  onHold={() => handleVirtualControl("hold")}
+                  onMoveLeftRelease={() =>
+                    handleVirtualControlRelease("moveLeft")
+                  }
+                  onMoveRightRelease={() =>
+                    handleVirtualControlRelease("moveRight")
+                  }
+                  onMoveDownRelease={() =>
+                    handleVirtualControlRelease("softDrop")
+                  }
+                  onRotateRelease={() => handleVirtualControlRelease("rotate")}
+                  onHardDropRelease={() =>
+                    handleVirtualControlRelease("hardDrop")
+                  }
+                  onHoldRelease={() => handleVirtualControlRelease("hold")}
+                />
+              </Box>
 
               {/* Mobile Sidebar Popup */}
               <MobileSidebarPopup
@@ -492,7 +520,7 @@ const RoomPage: React.FC = () => {
                 playerName={playerName}
                 gameBoard={gameBoard}
                 gameWinner={gameWinner}
-                onStartGame={startGame}
+                onStartGame={handleStartGameAndClosePopup}
                 onPauseGame={pauseGame}
                 onGoHome={handleGoHome}
                 onSettingsOpen={handleSettingsOpen}

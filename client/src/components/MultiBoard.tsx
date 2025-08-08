@@ -25,7 +25,8 @@ const Container = styled(Box)`
   margin-bottom: 16px;
   animation: ${fadeIn} 0.3s ease-out;
   position: relative;
-  z-index: 2100;
+  /* Hạ z-index để không che các dialog/modal (MUI modal zIndex ~1300) */
+  z-index: 100;
 `;
 
 const PlayerBoardContainer = styled(Box)`

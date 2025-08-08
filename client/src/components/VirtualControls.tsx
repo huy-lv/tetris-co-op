@@ -110,17 +110,12 @@ const VirtualControls: React.FC<VirtualControlsProps> = ({
   return (
     <Box
       sx={{
-        position: "fixed",
-        bottom: 8,
-        left: 8,
-        right: 8,
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr 1fr",
         gap: "1vw",
         alignItems: "flex-end",
         px: "2vw",
         py: 1.5,
-        zIndex: 1500,
         opacity: 0.5,
       }}
     >
