@@ -34,6 +34,7 @@ import RoomSidebar from "../components/RoomSidebar";
 import GameAlreadyStartedPopup from "../components/GameAlreadyStartedPopup";
 import gameService from "../services/gameService";
 import { MultiplayerGameOverState, PlayerGameOverData } from "../types";
+import PlayerNameDialog from "../components/PlayerNameDialog";
 
 const RoomPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,6 +50,8 @@ const RoomPage: React.FC = () => {
     gameBoard,
     gameWinner,
     playerName,
+    awaitingPlayerName,
+    submitPlayerName,
     startGame,
     pauseGame,
     togglePause,
@@ -586,6 +589,12 @@ const RoomPage: React.FC = () => {
             isOpen={showGameStartedPopup}
             roomCode={gameStartedRoomCode}
             onClose={closeGameStartedPopup}
+          />
+
+          {/* Ask for player name when missing */}
+          <PlayerNameDialog
+            open={awaitingPlayerName}
+            onSubmit={submitPlayerName}
           />
         </Container>
       </FireballEffect>

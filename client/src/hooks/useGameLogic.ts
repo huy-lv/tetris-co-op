@@ -28,7 +28,10 @@ import {
 } from "../utils/gameUtils";
 import { useBot } from "../bot";
 import { getControlsFromStorage } from "../utils/controlsUtils";
-import { getStoredPlayerName } from "../utils/nameGenerator";
+import {
+  getStoredPlayerNameOnly,
+  storePlayerName,
+} from "../utils/nameGenerator";
 import gameService from "../services/gameService";
 import { useNavigationGuard } from "./useNavigationGuard";
 
@@ -74,6 +77,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   const [gameStartedRoomCode, setGameStartedRoomCode] = useState<string>("");
   const [roomPlayers, setRoomPlayers] = useState<string[]>([]);
   const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [awaitingPlayerName, setAwaitingPlayerName] = useState<boolean>(false);
 
   // Refs
   const gameLoopRef = useRef<number | null>(null);
@@ -82,6 +86,7 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
   const lastMoveTimeRef = useRef<{ [key: string]: number }>({});
   const shouldSendGridRef = useRef<boolean>(false);
   const hasAttemptedJoinRef = useRef<string | null>(null);
+  const pendingRoomCodeRef = useRef<string | null>(null);
 
   // Get room ID from URL and set as room code
   useEffect(() => {
@@ -1240,124 +1245,147 @@ export const useGameLogic = (settingsOpen: boolean = false) => {
     gameBoard.grid,
   ]);
 
-  // Auto join room from URL
-  useEffect(() => {
-    const autoJoinRoom = async () => {
-      if (
-        roomCode &&
-        !gameService.getRoomCode() &&
-        hasAttemptedJoinRef.current !== roomCode
-      ) {
-        hasAttemptedJoinRef.current = roomCode;
-        // Nếu có roomCode trong URL nhưng chưa join room
-        const savedPlayerName = getStoredPlayerName(); // Sử dụng utility function
+  const autoJoinRoom = async (roomCode: string) => {
+    if (
+      roomCode &&
+      !gameService.getRoomCode() &&
+      hasAttemptedJoinRef.current !== roomCode
+    ) {
+      // Nếu chưa có tên người chơi, yêu cầu nhập trước khi tiếp tục
+      const existingNameOnly = getStoredPlayerNameOnly();
+      if (!existingNameOnly) {
+        setAwaitingPlayerName(true);
+        pendingRoomCodeRef.current = roomCode;
+        return;
+      }
 
-        setIsJoiningRoom(true);
-        setRoomError(null);
+      hasAttemptedJoinRef.current = roomCode;
+      const savedPlayerName = existingNameOnly;
 
-        // Setup event handlers
-        gameService.onError = (data) => {
-          console.error("Socket error:", data);
-          setRoomError(data.message || "Unknown error");
-          setIsJoiningRoom(false);
-        };
+      setIsJoiningRoom(true);
+      setRoomError(null);
 
-        try {
-          // Kiểm tra room trước khi join
-          console.log(`🔍 Checking room: ${roomCode}`);
-          const roomStatus = await gameService.checkRoom(roomCode);
+      // Setup event handlers
+      gameService.onError = (data) => {
+        console.error("Socket error:", data);
+        setRoomError(data.message || "Unknown error");
+        setIsJoiningRoom(false);
+      };
 
-          if (!roomStatus.exists) {
-            // Room không tồn tại, thử tạo room mới với roomCode từ URL
-            console.log(
-              `🏗️ Room ${roomCode} not found, attempting to create...`
-            );
+      try {
+        // Kiểm tra room trước khi join
+        console.log(`🔍 Checking room: ${roomCode}`);
+        const roomStatus = await gameService.checkRoom(roomCode);
 
-            // Reset players list cho room mới
-            setRoomPlayers([]);
+        if (!roomStatus.exists) {
+          // Room không tồn tại, thử tạo room mới với roomCode từ URL
+          console.log(`🏗️ Room ${roomCode} not found, attempting to create...`);
 
-            try {
-              await gameService.createRoomWithCode(savedPlayerName, roomCode);
-              console.log(`✅ Room ${roomCode} created successfully`);
-              // Room đã được tạo với roomCode mong muốn, bây giờ join
-              await gameService.joinRoom(roomCode, savedPlayerName);
-            } catch (createError: any) {
-              // Nếu tạo room thất bại (409 - room đã được tạo bởi người khác), thử join
-              if (
-                createError.message?.includes("already exists") ||
-                createError.message?.includes("Room already exists")
-              ) {
-                console.log(
-                  `🔄 Room ${roomCode} was created by another user during our attempt, trying to join...`
-                );
-                // Kiểm tra lại trạng thái room trước khi join
-                const updatedRoomStatus = await gameService.checkRoom(roomCode);
-                if (updatedRoomStatus.isStarted) {
-                  console.log(
-                    `⚠️ Room ${roomCode} started while we were creating, showing popup`
-                  );
-                  setShowGameStartedPopup(true);
-                  setGameStartedRoomCode(roomCode);
-                  setIsJoiningRoom(false);
-                  return;
-                }
-                await gameService.joinRoom(roomCode, savedPlayerName);
-              } else {
-                throw createError;
-              }
-            }
-          } else if (roomStatus.isStarted) {
-            // Room đã bắt đầu, hiện popup
-            console.log(`⚠️ Room ${roomCode} already started`);
-            setShowGameStartedPopup(true);
-            setGameStartedRoomCode(roomCode);
-            setIsJoiningRoom(false);
-            return;
-          } else {
-            // Room tồn tại và chưa bắt đầu, join bình thường
-            console.log(`✅ Room ${roomCode} exists and available, joining...`);
+          // Reset players list cho room mới
+          setRoomPlayers([]);
 
-            // Lưu thông tin players hiện tại trước khi join
-            if (roomStatus.players) {
-              const playerNames = roomStatus.players.map((p) => p.name);
-              console.log(
-                `👥 Current players in room: ${playerNames.join(", ")}`
-              );
-              setRoomPlayers(playerNames);
-            }
-
+          try {
+            await gameService.createRoomWithCode(savedPlayerName, roomCode);
+            console.log(`✅ Room ${roomCode} created successfully`);
+            // Room đã được tạo với roomCode mong muốn, bây giờ join
             await gameService.joinRoom(roomCode, savedPlayerName);
+          } catch (createError: unknown) {
+            const err = createError as { message?: string };
+            // Nếu tạo room thất bại (409 - room đã được tạo bởi người khác), thử join
+            if (
+              err.message?.includes("already exists") ||
+              err.message?.includes("Room already exists")
+            ) {
+              console.log(
+                `🔄 Room ${roomCode} was created by another user during our attempt, trying to join...`
+              );
+              // Kiểm tra lại trạng thái room trước khi join
+              const updatedRoomStatus = await gameService.checkRoom(roomCode);
+              if (updatedRoomStatus.isStarted) {
+                console.log(
+                  `⚠️ Room ${roomCode} started while we were creating, showing popup`
+                );
+                setShowGameStartedPopup(true);
+                setGameStartedRoomCode(roomCode);
+                setIsJoiningRoom(false);
+                return;
+              }
+              await gameService.joinRoom(roomCode, savedPlayerName);
+            } else {
+              throw createError;
+            }
+          }
+        } else if (roomStatus.isStarted) {
+          // Room đã bắt đầu, hiện popup
+          console.log(`⚠️ Room ${roomCode} already started`);
+          setShowGameStartedPopup(true);
+          setGameStartedRoomCode(roomCode);
+          setIsJoiningRoom(false);
+          return;
+        } else {
+          // Room tồn tại và chưa bắt đầu, join bình thường
+          console.log(`✅ Room ${roomCode} exists and available, joining...`);
+
+          // Lưu thông tin players hiện tại trước khi join
+          if (roomStatus.players) {
+            const playerNames = roomStatus.players.map((p) => p.name);
+            console.log(
+              `👥 Current players in room: ${playerNames.join(", ")}`
+            );
+            setRoomPlayers(playerNames);
           }
 
-          console.log(
-            `🚪 Successfully joined room: ${roomCode} with player: ${savedPlayerName}`
-          );
-
-          // Set game state to WAITING after successful join
-          setGameBoard((prev: GameBoard) => ({
-            ...prev,
-            gameState: GAME_STATES.WAITING,
-          }));
-
-          console.log("✅ Room join completed, game state set to WAITING");
-        } catch (error) {
-          console.error("Failed to auto-join room:", error);
-          setRoomError(`Failed to join room ${roomCode}`);
-          // Navigate back to home on error
-          navigate("/");
-        } finally {
-          setIsJoiningRoom(false);
+          await gameService.joinRoom(roomCode, savedPlayerName);
         }
-      }
-    };
 
-    autoJoinRoom();
+        console.log(
+          `🚪 Successfully joined room: ${roomCode} with player: ${savedPlayerName}`
+        );
+
+        // Set game state to WAITING after successful join
+        setGameBoard((prev: GameBoard) => ({
+          ...prev,
+          gameState: GAME_STATES.WAITING,
+        }));
+
+        console.log("✅ Room join completed, game state set to WAITING");
+      } catch (error) {
+        console.error("Failed to auto-join room:", error);
+        setRoomError(`Failed to join room ${roomCode}`);
+        // Navigate back to home on error
+        navigate("/");
+      } finally {
+        setIsJoiningRoom(false);
+      }
+    }
+  };
+
+  const submitPlayerName = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    storePlayerName(trimmed);
+    setPlayerName(trimmed);
+    setAwaitingPlayerName(false);
+
+    const pending = pendingRoomCodeRef.current;
+    if (pending) {
+      // reset attempted flag to allow join now that we have name
+      hasAttemptedJoinRef.current = null;
+      await autoJoinRoom(pending);
+    }
+  }, []);
+
+  // Auto join room from URL
+  useEffect(() => {
+    roomCode && autoJoinRoom(roomCode);
   }, [roomCode, playerName]);
 
   return {
     gameBoard,
     gameWinner,
     playerName,
+    awaitingPlayerName,
+    submitPlayerName,
     startGame,
     pauseGame,
     resumeGame,

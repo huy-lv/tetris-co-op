@@ -144,7 +144,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
                     placeholder="Your name"
-                    inputProps={{ maxLength: 20 }}
+                    slotProps={{ input: { maxLength: 20 } }}
                     required
                     sx={{
                       mb: 3,
@@ -192,7 +192,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
                     placeholder="Your name"
-                    inputProps={{ maxLength: 20 }}
+                    slotProps={{ input: { maxLength: 20 } }}
                     required
                     sx={{
                       mb: 2,
@@ -209,7 +209,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                     value={roomCode}
                     onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                     placeholder="e.g., ABC123"
-                    inputProps={{ maxLength: 6 }}
+                    slotProps={{ input: { maxLength: 6 } }}
                     required
                     sx={{
                       mb: 3,
