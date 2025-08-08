@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Paper, useTheme, useMediaQuery } from "@mui/material";
 import { keyframes } from "@emotion/react";
 import { Tetromino, TetrominoType } from "../types";
-import { GAME_CONFIG } from "../constants";
+import { GAME_CONFIG, ANIMATION_SETTINGS } from "../constants";
 import GameCell from "./GameCell";
 
 interface GameBoardProps {
@@ -147,9 +147,10 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
           inset 0 0 30px rgba(0, 0, 0, 0.7)
         `,
         position: "relative",
-        animation: isShaking
-          ? `${shakeAnimation} 0.3s ease-in-out`
-          : `${blockGlow} 4s ease-in-out infinite`,
+        animation:
+          isShaking && ANIMATION_SETTINGS.ENABLE_SHAKE
+            ? `${shakeAnimation} 0.3s ease-in-out`
+            : `${blockGlow} 4s ease-in-out infinite`,
         "&::before": {
           content: '""',
           position: "absolute",

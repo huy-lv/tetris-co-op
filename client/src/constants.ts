@@ -9,6 +9,44 @@ export const GAME_CONFIG = {
 
 export const TEST_MODE = false; // Set to true to always spawn O pieces for testing
 
+// Default animation settings - can be overridden by user preferences
+export const DEFAULT_ANIMATION_SETTINGS = {
+  ENABLE_SHAKE: true, // Enable/disable shake animation
+  ENABLE_FIREBALL: true, // Enable/disable fireball animation
+} as const;
+
+// Current animation settings (will be updated by user preferences)
+export let ANIMATION_SETTINGS: {
+  ENABLE_SHAKE: boolean;
+  ENABLE_FIREBALL: boolean;
+} = { ...DEFAULT_ANIMATION_SETTINGS };
+
+// Load animation settings from localStorage on app start
+if (typeof window !== "undefined") {
+  const savedAnimationSettings = localStorage.getItem(
+    "tetris-animation-settings"
+  );
+  if (savedAnimationSettings) {
+    try {
+      const parsedSettings = JSON.parse(savedAnimationSettings);
+      ANIMATION_SETTINGS = {
+        ENABLE_SHAKE: parsedSettings.enableShake ?? true,
+        ENABLE_FIREBALL: parsedSettings.enableFireball ?? true,
+      };
+    } catch (error) {
+      console.error("Failed to parse saved animation settings:", error);
+    }
+  }
+}
+
+// Function to update animation settings
+export const updateAnimationSettings = (settings: {
+  ENABLE_SHAKE?: boolean;
+  ENABLE_FIREBALL?: boolean;
+}) => {
+  ANIMATION_SETTINGS = { ...ANIMATION_SETTINGS, ...settings };
+};
+
 export const CONTROLS = {
   MOVE_LEFT: "a",
   MOVE_RIGHT: "d",

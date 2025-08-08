@@ -7,7 +7,7 @@ export const copyRoomLink = async (): Promise<void> => {
   const currentUrl = window.location.href;
 
   if (!currentUrl.includes("/room?id=")) {
-            toast.error("Cannot copy room link!");
+    toast.error("Cannot copy room link!");
     return;
   }
 

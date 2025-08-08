@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from "react";
 import Fireball from "./Fireball";
+import { ANIMATION_SETTINGS } from "../constants";
 
 interface FireballData {
   id: string;
@@ -109,18 +110,19 @@ const FireballEffect = React.forwardRef<FireballEffectRef, FireballEffectProps>(
     return (
       <>
         {children}
-        {fireballs.map((fireball) => (
-          <Fireball
-            key={fireball.id}
-            startX={fireball.startX}
-            startY={fireball.startY}
-            targetX={fireball.targetX}
-            targetY={fireball.targetY}
-            targetPlayerId={fireball.targetPlayerId}
-            garbageRows={fireball.garbageRows}
-            onComplete={() => removeFireball(fireball.id)}
-          />
-        ))}
+        {ANIMATION_SETTINGS.ENABLE_FIREBALL &&
+          fireballs.map((fireball) => (
+            <Fireball
+              key={fireball.id}
+              startX={fireball.startX}
+              startY={fireball.startY}
+              targetX={fireball.targetX}
+              targetY={fireball.targetY}
+              targetPlayerId={fireball.targetPlayerId}
+              garbageRows={fireball.garbageRows}
+              onComplete={() => removeFireball(fireball.id)}
+            />
+          ))}
       </>
     );
   }

@@ -15,8 +15,13 @@ import {
   KeyboardRounded,
   TuneRounded,
   CloseRounded,
+  Animation,
 } from "@mui/icons-material";
-import { CONTROLS } from "../constants";
+import {
+  CONTROLS,
+  ANIMATION_SETTINGS,
+  updateAnimationSettings,
+} from "../constants";
 
 interface KeyCaptureProps {
   value: string;
@@ -124,6 +129,14 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
     [key: string]: string;
   }>({ ...CONTROLS });
   const [capturingKey, setCapturingKey] = useState<string | null>(null);
+  const [animationSettings, setAnimationSettings] = useState({
+    enableShake: ANIMATION_SETTINGS.ENABLE_SHAKE,
+    enableFireball: ANIMATION_SETTINGS.ENABLE_FIREBALL,
+  });
+  const [originalAnimationSettings, setOriginalAnimationSettings] = useState({
+    enableShake: ANIMATION_SETTINGS.ENABLE_SHAKE,
+    enableFireball: ANIMATION_SETTINGS.ENABLE_FIREBALL,
+  });
 
   // Load settings from localStorage when component mounts
   useEffect(() => {
@@ -135,6 +148,20 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
         setOriginalControls(parsedControls);
       } catch (error) {
         console.error("Failed to parse saved controls:", error);
+      }
+    }
+
+    // Load animation settings from localStorage
+    const savedAnimationSettings = localStorage.getItem(
+      "tetris-animation-settings"
+    );
+    if (savedAnimationSettings) {
+      try {
+        const parsedAnimationSettings = JSON.parse(savedAnimationSettings);
+        setAnimationSettings(parsedAnimationSettings);
+        setOriginalAnimationSettings(parsedAnimationSettings);
+      } catch (error) {
+        console.error("Failed to parse saved animation settings:", error);
       }
     }
   }, [open]);
@@ -165,12 +192,32 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
 
   const handleSave = () => {
     localStorage.setItem("tetris-controls", JSON.stringify(controls));
+    localStorage.setItem(
+      "tetris-animation-settings",
+      JSON.stringify(animationSettings)
+    );
     setOriginalControls({ ...controls });
+    setOriginalAnimationSettings({ ...animationSettings });
+
+    // Update global animation settings
+    updateAnimationSettings({
+      ENABLE_SHAKE: animationSettings.enableShake,
+      ENABLE_FIREBALL: animationSettings.enableFireball,
+    });
+
     onClose();
   };
 
   const handleReset = () => {
     setControls({ ...CONTROLS });
+    setAnimationSettings({
+      enableShake: true,
+      enableFireball: true,
+    });
+    setOriginalAnimationSettings({
+      enableShake: true,
+      enableFireball: true,
+    });
   };
 
   const CONTROL_LABELS: Record<keyof typeof CONTROLS, string> = {
@@ -243,6 +290,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
           }}
         >
           <Tab icon={<KeyboardRounded />} label="Controls" />
+          <Tab icon={<Animation />} label="Animations" />
           <Tab icon={<TuneRounded />} label="General" />
         </Tabs>
       </Box>
@@ -298,6 +346,89 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
 
         <TabPanel value={tabValue} index={1}>
           <Typography variant="h6" color="primary.light" gutterBottom>
+            Animation Settings
+          </Typography>
+
+          <Box sx={{ mt: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                p: 2,
+                py: 1.5,
+                borderRadius: 2,
+                border: "1px solid rgba(0, 170, 255, 0.2)",
+                bgcolor: "rgba(0, 0, 0, 0.2)",
+                mb: 2,
+              }}
+            >
+              <Box>
+                <Typography variant="body1" color="text.primary">
+                  Shake Animation
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Screen shake when clearing lines or game over
+                </Typography>
+              </Box>
+              <input
+                type="checkbox"
+                checked={animationSettings.enableShake}
+                onChange={(e) =>
+                  setAnimationSettings({
+                    ...animationSettings,
+                    enableShake: e.target.checked,
+                  })
+                }
+                style={{
+                  width: "20px",
+                  height: "20px",
+                  accentColor: "#00aaff",
+                }}
+              />
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                p: 2,
+                py: 1.5,
+                borderRadius: 2,
+                border: "1px solid rgba(0, 170, 255, 0.2)",
+                bgcolor: "rgba(0, 0, 0, 0.2)",
+              }}
+            >
+              <Box>
+                <Typography variant="body1" color="text.primary">
+                  Fireball Animation
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Fireball effects when sending garbage rows
+                </Typography>
+              </Box>
+              <input
+                type="checkbox"
+                checked={animationSettings.enableFireball}
+                onChange={(e) =>
+                  setAnimationSettings({
+                    ...animationSettings,
+                    enableFireball: e.target.checked,
+                  })
+                }
+                style={{
+                  width: "20px",
+                  height: "20px",
+                  accentColor: "#00aaff",
+                }}
+              />
+            </Box>
+          </Box>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
+          <Typography variant="h6" color="primary.light" gutterBottom>
             General Settings
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -320,7 +451,9 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ open, onClose }) => {
           color="primary"
           variant="contained"
           disabled={
-            JSON.stringify(controls) === JSON.stringify(originalControls)
+            JSON.stringify(controls) === JSON.stringify(originalControls) &&
+            JSON.stringify(animationSettings) ===
+              JSON.stringify(originalAnimationSettings)
           }
         >
           Save Changes
