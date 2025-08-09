@@ -17,11 +17,8 @@ import {
   Divider,
 } from "@mui/material";
 import { keyframes } from "@emotion/react";
-import {
-  SportsEsportsRounded,
-  AddRounded,
-  LoginRounded,
-} from "@mui/icons-material";
+import { AddRounded, LoginRounded } from "@mui/icons-material";
+import gameConsole from "../assets/game-console.png";
 
 interface WelcomeScreenProps {
   onCreateRoom: (playerName: string) => void;
@@ -78,24 +75,30 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       <Fade in timeout={800}>
         <Box>
           <Box textAlign="center" mb={4}>
-            <Typography
-              variant="h1"
-              component="h1"
-              sx={{
-                animation: `${pulseAnimation} 2s ease-in-out infinite`,
-                mb: 2,
-                fontSize: isMobile ? "2.5rem" : "3rem",
-              }}
-            >
-              TETRIS COOP
-            </Typography>
-            <SportsEsportsRounded
-              sx={{
-                fontSize: 48,
-                color: "primary.main",
-                animation: `${pulseAnimation} 3s ease-in-out infinite`,
-              }}
-            />
+            <Stack direction="row" justifyContent="center" alignItems="center">
+              <Box
+                component="img"
+                src={gameConsole}
+                alt="Game console"
+                sx={{
+                  height: isMobile ? 72 : 96,
+                  width: "auto",
+                  animation: `${pulseAnimation} 3s ease-in-out infinite`,
+                  filter: "drop-shadow(0 6px 18px rgba(0, 170, 255, 0.25))",
+                }}
+              />
+              <Typography
+                variant="h1"
+                component="h1"
+                sx={{
+                  animation: `${pulseAnimation} 2s ease-in-out infinite`,
+                  mb: 0,
+                  fontSize: isMobile ? "2.5rem" : "3rem",
+                }}
+              >
+                TETRIS COOP
+              </Typography>
+            </Stack>
           </Box>
 
           <Card
