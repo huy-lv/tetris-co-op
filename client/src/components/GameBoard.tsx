@@ -53,28 +53,24 @@ const GameBoardComponent: React.FC<GameBoardProps> = ({
   const renderGrid = () => {
     const displayGrid = grid.map((row) => [...row]);
 
-    // Build a set of ghost piece coordinates for easy lookup
-    const ghostCoords = new Set<string>();
-
-    if (ghostPiece) {
-      ghostPiece.shape.forEach((row, y) => {
-        row.forEach((cell, x) => {
-          if (cell === 1) {
-            const boardY = ghostPiece.position.y + y;
-            const boardX = ghostPiece.position.x + x;
-
-            if (
-              boardY >= 0 &&
-              boardY < GAME_CONFIG.BOARD_HEIGHT &&
-              boardX >= 0 &&
-              boardX < GAME_CONFIG.BOARD_WIDTH
-            ) {
-              ghostCoords.add(`${boardY}-${boardX}`);
-            }
-          }
-        });
-      });
-    }
+    // Build a set of ghost piece coordinates using map/flatMap (no side effects)
+    const ghostCoords: Set<string> = new Set(
+      ghostPiece
+        ? ghostPiece.shape.flatMap((row, y) =>
+            row.flatMap((cell, x) => {
+              if (cell !== 1) return [] as string[];
+              const boardY = ghostPiece.position.y + y;
+              const boardX = ghostPiece.position.x + x;
+              const inBounds =
+                boardY >= 0 &&
+                boardY < GAME_CONFIG.BOARD_HEIGHT &&
+                boardX >= 0 &&
+                boardX < GAME_CONFIG.BOARD_WIDTH;
+              return inBounds ? [`${boardY}-${boardX}`] : [];
+            })
+          )
+        : []
+    );
 
     // Add active piece to display grid
     if (activePiece) {
