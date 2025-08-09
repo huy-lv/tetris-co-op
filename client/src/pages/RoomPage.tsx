@@ -10,7 +10,6 @@ import {
   useMediaQuery,
   CircularProgress,
   Alert,
-  Fab,
   IconButton,
 } from "@mui/material";
 import { HomeRounded, Menu } from "@mui/icons-material";

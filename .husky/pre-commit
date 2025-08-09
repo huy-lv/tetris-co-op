@@ -1,0 +1,16 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Running typecheck and lint..."
+
+# Client typecheck and lint
+cd client || exit 1
+yarn --silent typecheck || exit 1
+yarn --silent lint || exit 1
+
+# Server typecheck
+cd ../server || exit 1
+yarn --silent typecheck || exit 1
+
+echo "Pre-commit checks passed."
+
